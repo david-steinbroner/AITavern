@@ -13,17 +13,43 @@ import ChatInterface from "./components/ChatInterface";
 import CombatInterface from "./components/CombatInterface";
 import StartMenu from "./components/StartMenu";
 import UserGuide from "./components/UserGuide";
+import WelcomeScreen from "./components/WelcomeScreen";
+import DemoTooltip from "./components/DemoTooltip";
+import { useTooltips } from "./hooks/useTooltips";
 
 // Types
 import type { Character, Quest, Item, Message, Enemy, GameState } from "@shared/schema";
 
 type TabType = "character" | "quests" | "inventory" | "chat";
-type ViewType = "startMenu" | "userGuide" | "game";
+type ViewType = "welcome" | "startMenu" | "userGuide" | "game";
 
 function GameApp() {
-  const [currentView, setCurrentView] = useState<ViewType>("startMenu");
+  const [currentView, setCurrentView] = useState<ViewType>("welcome");
   const [activeTab, setActiveTab] = useState<TabType>("character");
   const [isListening, setIsListening] = useState(false);
+  
+  // Demo and tooltip functionality
+  const {
+    isDemoActive,
+    currentDemoStep,
+    demoCompleted,
+    seenTooltips,
+    startDemo,
+    nextDemoStep,
+    skipDemo,
+    getCurrentDemoStep,
+    shouldShowDemo
+  } = useTooltips();
+
+  // Check if we should show welcome screen for returning users
+  useEffect(() => {
+    const isNewUser = !demoCompleted && seenTooltips.size === 0;
+    
+    // If user has completed demo or has seen tooltips, skip welcome
+    if (!isNewUser && currentView === "welcome") {
+      setCurrentView("startMenu");
+    }
+  }, [demoCompleted, seenTooltips.size, currentView]);
   
   // Fetch real data from backend
   const { data: character, isLoading: characterLoading } = useQuery<Character>({
@@ -260,6 +286,23 @@ function GameApp() {
   }, []);
   
   // Handle different views
+  if (currentView === "welcome") {
+    return (
+      <WelcomeScreen
+        onStartDemo={() => {
+          startDemo();
+          setCurrentView("game");
+          setActiveTab("character");
+        }}
+        onSkipDemo={() => {
+          skipDemo();
+          setCurrentView("startMenu");
+        }}
+        onEnterGame={() => setCurrentView("startMenu")}
+      />
+    );
+  }
+
   if (currentView === "startMenu") {
     return (
       <StartMenu 
@@ -313,6 +356,33 @@ function GameApp() {
         onFlee={handleCombatAction.flee}
         onEnemyAction={handleEnemyAction}
       />
+
+      {/* Demo Tooltip Overlay */}
+      {isDemoActive && getCurrentDemoStep() && (
+        <DemoTooltip
+          step={getCurrentDemoStep()!}
+          isVisible={true}
+          onNext={() => {
+            const currentStep = getCurrentDemoStep();
+            if (currentStep) {
+              // Handle tab switching during demo
+              if (currentStep.id === "quests") {
+                setActiveTab("quests");
+              } else if (currentStep.id === "inventory") {
+                setActiveTab("inventory");
+              } else if (currentStep.id === "chat") {
+                setActiveTab("chat");
+              }
+            }
+            nextDemoStep();
+          }}
+          onSkip={skipDemo}
+          totalSteps={5}
+          currentStepNumber={
+            ['welcome', 'quests', 'inventory', 'chat', 'first-message'].indexOf(currentDemoStep || '') + 1
+          }
+        />
+      )}
     </div>
   );
 }
