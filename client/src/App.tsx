@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { TooltipProvider as CustomTooltipProvider } from "@/components/TooltipProvider";
+import { TooltipVisibilityProvider } from "@/components/TooltipProvider";
 import SettingsDropdown from "@/components/SettingsDropdown";
 import { ArrowLeft } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
@@ -513,10 +513,10 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider defaultTheme="dark">
           <TooltipProvider>
-            <CustomTooltipProvider>
+            <TooltipVisibilityProvider>
               <GameApp />
               <Toaster />
-            </CustomTooltipProvider>
+            </TooltipVisibilityProvider>
           </TooltipProvider>
         </ThemeProvider>
       </QueryClientProvider>

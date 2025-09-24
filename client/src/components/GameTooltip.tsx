@@ -27,7 +27,7 @@ export default function GameTooltip({
   const { showTooltips } = useTooltips();
 
   if (!showTooltips) {
-    return null;
+    return children ? <>{children}</> : null;
   }
 
   return (
@@ -37,7 +37,7 @@ export default function GameTooltip({
           <Button
             variant="ghost"
             size="icon"
-            className={`h-5 w-5 text-muted-foreground hover:text-foreground ${className}`}
+            className={`min-h-9 min-w-9 text-muted-foreground hover:text-foreground ${className}`}
             aria-label={ariaLabel}
             data-testid={testId}
           >

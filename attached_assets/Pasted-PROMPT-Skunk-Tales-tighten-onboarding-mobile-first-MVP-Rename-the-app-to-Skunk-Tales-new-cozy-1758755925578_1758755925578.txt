@@ -1,0 +1,17 @@
+PROMPT: “Skunk Tales” — tighten onboarding, mobile-first MVP
+Rename the app to Skunk Tales (new cozy tagline under title) and make it fast to start playing. Mobile is primary.
+Persistent top nav: fixed header on every screen with a Back button that always works. If leaving an unsaved form, show a simple “You may lose changes” confirm.
+Accounts required to play: simple one-page sign up (SSO or name+email). Email signups require confirmation. Add Login/Logout in the header.
+Account page (via nav): show name, email, confirmation status. Allow change name, change email (re-confirm), delete account. Include dark/light mode toggle here and accessible from the header.
+Your Adventures: support multiple adventures per user. Home lists “Start New Adventure” and any existing ones with Continue. If a user starts then backs out, it still shows up to resume later.
+Onboarding speedrun: from Home, users should be able to start with either:
+Quick Start: generate a fully random character and jump in, or
+Basic Pick: choose a simple preset (e.g., “Ranger”) and go.
+Users can save characters and reuse them across different adventures.
+Character creation (when not using Quick Start): keep steps tight and mobile-friendly. Add Randomize buttons for Physical Build, Magic Affinity, Combat Style, Social Nature, Natural Talents. “I’m not sure” gives a quick recommendation.
+Race & Class selection: show all options. The info icons are tappable and open a small popover with real content (title, one-line flavor, 2–3 traits). Works on mobile tap and desktop click.
+Portrait generator UI: when a portrait is generated or uploaded, the preview actually displays (loading, success, retry on error). If no image yet, show a neutral placeholder.
+Mobile polish: reduce extra spacing, avoid long scrolls, no horizontal overflow, big tap targets, inputs don’t hide under the keyboard.
+Branding: replace “AI Dungeon Master” with Skunk Tales everywhere. Add a small friendly “scrungly skunk” image in the hero (use a placeholder asset hook).
+Sanity check: it may have run out of credits earlier—please make sure multiple adventures per account and resume flow are fully working before handoff.
+Goal: a cozy, fast path from landing → Quick Start → in game, with accounts, reusable characters, and clean mobile UX.
