@@ -439,7 +439,7 @@ function GameApp() {
           </Button>
           <div className="group">
             <EditableCampaignName
-              campaignName={campaign?.name || "AI Dungeon Master"}
+              campaignName={campaign?.name || "Skunk Tales"}
               campaignId={campaign?.id}
             />
           </div>

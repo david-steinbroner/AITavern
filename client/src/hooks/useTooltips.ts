@@ -66,7 +66,7 @@ export function useTooltips() {
       tooltipId: "demo-chat",
       targetElement: "[data-testid='tab-chat']",
       title: "Talk to Your DM",
-      content: "This is where the magic happens! Chat with your AI Dungeon Master to continue your adventure.",
+      content: "This is where the magic happens! Chat with your AI storyteller to continue your adventure.",
       action: "Start Chatting",
       nextStep: "first-message"
     },

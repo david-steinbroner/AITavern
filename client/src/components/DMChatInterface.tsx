@@ -83,7 +83,7 @@ export default function DMChatInterface({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Crown className="w-5 h-5 text-primary" />
-            Dungeon Master Console
+            Storyteller Console
           </DialogTitle>
         </DialogHeader>
 
@@ -121,7 +121,7 @@ export default function DMChatInterface({
                     <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                     <h3 className="font-medium text-foreground mb-1">Direct DM Communication</h3>
                     <p className="text-sm text-muted-foreground">
-                      Ask the Dungeon Master to adjust game settings, change story direction, or make modifications to your campaign.
+                      Ask your AI storyteller to adjust game settings, change story direction, or make modifications to your campaign.
                     </p>
                   </div>
                 ) : (

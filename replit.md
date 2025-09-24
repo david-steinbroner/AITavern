@@ -1,10 +1,10 @@
-# AI TTRPG Mobile Game
+# Skunk Tales - Cozy AI Adventure Game
 
 ## Overview
 
-This is an AI-powered tabletop role-playing game (TTRPG) built as a mobile-first web application. The game features an intelligent Dungeon Master powered by OpenAI's GPT model that creates dynamic storylines, manages combat encounters, and controls NPCs. Players interact through a chat interface while managing their character, quests, and inventory through dedicated mobile-optimized screens.
+Skunk Tales is a cozy AI-powered adventure game built as a mobile-first web application. The game features a friendly AI storyteller powered by OpenAI's GPT model that creates dynamic storylines, manages encounters, and controls NPCs. Players interact through a chat interface while managing their character, quests, and inventory through dedicated mobile-optimized screens.
 
-The application combines the immersive storytelling of traditional D&D with modern mobile gaming UI patterns, featuring real-time AI responses, turn-based combat, and persistent game state management.
+The application combines cozy storytelling with modern mobile gaming UI patterns, featuring real-time AI responses, gentle turn-based encounters, and persistent game state management.
 
 ## User Preferences
 
@@ -34,7 +34,7 @@ Preferred communication style: Simple, everyday language.
 - **Message History**: Persistent chat logs with support for DM, player, and NPC messages
 
 ### Game Logic
-- **AI Game Master**: Contextual responses based on character stats, current quests, and game state
+- **AI Storyteller**: Contextual responses based on character stats, current quests, and game state
 - **Dynamic Quest Generation**: AI-driven quest creation and progression
 - **Combat Management**: Automated turn-based combat with strategic AI enemy behavior
 - **Game State Persistence**: Continuous save system maintaining all game progress
@@ -44,7 +44,7 @@ Preferred communication style: Simple, everyday language.
 ### Core Dependencies
 - **@neondatabase/serverless**: PostgreSQL database connectivity
 - **drizzle-orm**: Type-safe database ORM with schema validation
-- **OpenAI API**: GPT-5 integration for AI game master functionality
+- **OpenAI API**: GPT-5 integration for AI storyteller functionality
 - **@tanstack/react-query**: Client-side data fetching and caching
 
 ### UI/UX Libraries

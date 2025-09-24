@@ -86,7 +86,7 @@ export default function NavigationTabs({
       tooltip: {
         id: 'nav-chat',
         title: 'Adventure Chat',
-        content: 'Talk with your AI Dungeon Master! Describe what you want to do and the DM will guide your story.'
+        content: 'Talk with your AI storyteller! Describe what you want to do and they will guide your story.'
       }
     }
   ];

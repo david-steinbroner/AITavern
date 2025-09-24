@@ -9,6 +9,7 @@ import {
   Crown,
   Star 
 } from "lucide-react";
+import skunkImage from "@assets/stock_images/friendly_cartoon_sku_323499d5.jpg";
 
 interface WelcomeScreenProps {
   onStartDemo: () => void;
@@ -29,16 +30,23 @@ export default function WelcomeScreen({
         {/* Hero Section */}
         <div className="text-center space-y-3 sm:space-y-4">
           <div className="flex justify-center">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-primary/10 rounded-full flex items-center justify-center">
-              <Crown className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-primary/10 rounded-full flex items-center justify-center overflow-hidden">
+              <img 
+                src={skunkImage} 
+                alt="Skunk Tales mascot" 
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
           <div>
             <h1 className="font-serif text-2xl sm:text-3xl font-bold text-foreground mb-2">
-              Welcome, Adventurer!
+              Skunk Tales
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground px-2 sm:px-0">
-              Your AI-powered tabletop adventure awaits. Create epic stories with your intelligent Dungeon Master.
+            <p className="text-sm sm:text-base text-muted-foreground px-2 sm:px-0 mb-1">
+              Cozy adventures await in your enchanted forest
+            </p>
+            <p className="text-xs sm:text-sm text-muted-foreground/80 px-2 sm:px-0">
+              Create epic stories with your AI storyteller companion
             </p>
           </div>
         </div>
@@ -123,7 +131,7 @@ export default function WelcomeScreen({
           <div className="text-xs text-muted-foreground space-y-1">
             <p className="font-medium">What you'll experience:</p>
             <div className="flex justify-center gap-4">
-              <span>• AI Dungeon Master</span>
+              <span>• AI Storyteller</span>
               <span>• Dynamic Stories</span>
               <span>• Multiple Adventures</span>
             </div>

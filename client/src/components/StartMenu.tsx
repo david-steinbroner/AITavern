@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HelpCircle, Settings, Sword, Scroll, UserPlus, Map } from "lucide-react";
 import MultipleAdventures from "./MultipleAdventures";
+import skunkImage from "@assets/stock_images/friendly_cartoon_sku_323499d5.jpg";
 
 interface StartMenuProps {
   onStartGame: (campaignId: string) => void;
@@ -23,14 +24,19 @@ export default function StartMenu({
       {/* Hero Section */}
       <div className="text-center mb-8">
         <div className="mb-4">
-          <Sword className="w-16 h-16 mx-auto text-primary mb-2" />
-          <Scroll className="w-12 h-12 mx-auto text-accent -mt-8 ml-8" />
+          <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center overflow-hidden">
+            <img 
+              src={skunkImage}
+              alt="Skunk Tales mascot" 
+              className="w-full h-full object-cover"
+            />
+          </div>
         </div>
         <h1 className="font-serif text-4xl text-primary mb-2" data-testid="game-title">
-          AI Dungeon Master
+          Skunk Tales
         </h1>
         <p className="text-muted-foreground text-lg max-w-sm mx-auto leading-relaxed">
-          Embark on epic adventures powered by artificial intelligence. Your story awaits.
+          Embark on cozy adventures in your enchanted forest. Every tale is unique.
         </p>
       </div>
 
@@ -52,7 +58,7 @@ export default function StartMenu({
             Create New Character
           </Button>
           <p className="text-sm text-muted-foreground mt-3 text-center">
-            Design your adventurer with AI-generated portrait
+            Design your adventurer with custom portrait options
           </p>
         </Card>
 
