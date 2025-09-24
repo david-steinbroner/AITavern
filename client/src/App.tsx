@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from "react";
 // Components
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ErrorMonitor } from "./components/ErrorMonitor";
+import EditableCampaignName from "./components/EditableCampaignName";
 import NavigationTabs from "./components/NavigationTabs";
 import CharacterSheet from "./components/CharacterSheet";
 import QuestLog from "./components/QuestLog";
@@ -26,7 +27,7 @@ import { useTooltips } from "./hooks/useTooltips";
 import { useNotifications } from "./hooks/useNotifications";
 
 // Types
-import type { Character, Quest, Item, Message, Enemy, GameState } from "@shared/schema";
+import type { Character, Quest, Item, Message, Enemy, GameState, Campaign } from "@shared/schema";
 
 type TabType = "character" | "quests" | "inventory" | "chat";
 type ViewType = "welcome" | "startMenu" | "userGuide" | "characterCreation" | "adventureTemplates" | "game";
@@ -82,6 +83,11 @@ function GameApp() {
   const { data: gameState } = useQuery<GameState>({
     queryKey: ['/api/game-state'],
   });
+
+  // Fetch current campaign
+  const { data: campaign } = useQuery<Campaign>({
+    queryKey: ['/api/campaigns/active'],
+  });
   
   // Combat state based on game state
   const isInCombat = gameState?.inCombat || false;
@@ -100,8 +106,8 @@ function GameApp() {
   
   // AI Chat mutation
   const aiChatMutation = useMutation({
-    mutationFn: async (message: string) => {
-      const response = await apiRequest('POST', '/api/ai/chat', { message });
+    mutationFn: async (data: { message: string; isDirectDM: boolean }) => {
+      const response = await apiRequest('POST', '/api/ai/chat', data);
       return response.json();
     },
     onSuccess: () => {
@@ -157,8 +163,8 @@ function GameApp() {
   });
   
   // Event Handlers
-  const handleSendMessage = (content: string) => {
-    aiChatMutation.mutate(content);
+  const handleSendMessage = (content: string, isDirectDM: boolean = false) => {
+    aiChatMutation.mutate({ message: content, isDirectDM });
   };
   
   const handleQuickAction = (action: string) => {
@@ -303,6 +309,7 @@ function GameApp() {
         return (
           <ChatInterface 
             messages={messages}
+            character={character}
             onSendMessage={handleSendMessage}
             onQuickAction={handleQuickAction}
             isListening={isListening}
@@ -415,11 +422,14 @@ function GameApp() {
             data-testid="button-return-menu"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
-            Menu
+            Main Menu
           </Button>
-          <h1 className="font-serif text-lg sm:text-xl text-primary" data-testid="app-title">
-            ⚔️ AI Dungeon Master
-          </h1>
+          <div className="group">
+            <EditableCampaignName
+              campaignName={campaign?.name || "AI Dungeon Master"}
+              campaignId={campaign?.id}
+            />
+          </div>
           <ThemeToggle />
         </div>
       </div>

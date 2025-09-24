@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import StatDisplay from "./StatDisplay";
 import HealthBar from "./HealthBar";
+import EditableCharacterName from "./EditableCharacterName";
 import type { Character } from "@shared/schema";
 
 interface CharacterSheetProps {
@@ -15,7 +16,12 @@ export default function CharacterSheet({ character, className = "" }: CharacterS
       {/* Character Header */}
       <Card>
         <CardHeader className="text-center pb-2">
-          <CardTitle className="font-serif text-2xl text-primary">{character.name}</CardTitle>
+          <div className="flex justify-center">
+            <EditableCharacterName
+              characterName={character.name}
+              characterId={character.id}
+            />
+          </div>
           <div className="flex justify-center space-x-2">
             <Badge variant="secondary" data-testid="character-class">{character.class}</Badge>
             <Badge variant="outline" data-testid="character-level">Level {character.level}</Badge>

@@ -2,13 +2,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Mic, MicOff, Send, Swords, Eye, MessageSquare, Loader2 } from "lucide-react";
-import type { Message } from "@shared/schema";
+import { Switch } from "@/components/ui/switch";
+import { Mic, MicOff, Send, Swords, Eye, MessageSquare, Loader2, User, UserCheck } from "lucide-react";
+import HighlightedMessage from "./HighlightedMessage";
+import type { Message, Character } from "@shared/schema";
 import { useState, useRef, useEffect } from "react";
 
 interface ChatInterfaceProps {
   messages: Message[];
-  onSendMessage?: (content: string) => void;
+  character?: Character;
+  onSendMessage?: (content: string, isDirectDM?: boolean) => void;
   onQuickAction?: (action: string) => void;
   isListening?: boolean;
   onToggleListening?: () => void;
@@ -18,6 +21,7 @@ interface ChatInterfaceProps {
 
 export default function ChatInterface({ 
   messages, 
+  character,
   onSendMessage, 
   onQuickAction,
   isListening = false,
@@ -26,6 +30,7 @@ export default function ChatInterface({
   className = "" 
 }: ChatInterfaceProps) {
   const [inputText, setInputText] = useState("");
+  const [isDirectDM, setIsDirectDM] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const quickActions = [
@@ -42,9 +47,9 @@ export default function ChatInterface({
   
   const handleSend = () => {
     if (inputText.trim()) {
-      onSendMessage?.(inputText);
+      onSendMessage?.(inputText, isDirectDM);
       setInputText("");
-      console.log('Message sent:', inputText);
+      console.log('Message sent:', inputText, 'Direct DM:', isDirectDM);
     }
   };
   
@@ -74,8 +79,23 @@ export default function ChatInterface({
       <Card className="flex-1 flex flex-col">
         <CardHeader className="pb-3">
           <CardTitle className="font-serif text-xl">Adventure Chat</CardTitle>
-          <div className="text-sm text-muted-foreground">
-            Speak with the DM and NPCs • Use voice or quick actions
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              {isDirectDM ? "Direct DM communication" : "In-character roleplay"}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-sm">
+                <User className="w-4 h-4" />
+                <span className="text-muted-foreground">In Character</span>
+                <Switch
+                  checked={isDirectDM}
+                  onCheckedChange={setIsDirectDM}
+                  data-testid="switch-direct-dm"
+                />
+                <span className="text-muted-foreground">Direct DM</span>
+                <UserCheck className="w-4 h-4" />
+              </div>
+            </div>
           </div>
         </CardHeader>
         
@@ -101,7 +121,12 @@ export default function ChatInterface({
                         ? "bg-primary/10 border-l-4 border-primary ml-4" 
                         : "bg-muted/50"
                     }`}>
-                      <p className="text-sm text-foreground">{message.content}</p>
+                      <HighlightedMessage 
+                        content={message.content} 
+                        character={character}
+                        messages={messages}
+                        className="text-sm text-foreground"
+                      />
                     </div>
                   </div>
                 ))
@@ -153,7 +178,7 @@ export default function ChatInterface({
             <div className="flex-1 flex gap-2">
               <input
                 type="text"
-                placeholder={isListening ? "Listening..." : "Type your message..."}
+                placeholder={isListening ? "Listening..." : isDirectDM ? "Ask the DM directly..." : "Type your in-character message..."}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleSend()}

@@ -11,6 +11,7 @@ import {
   insertEnemySchema,
   insertGameStateSchema,
   insertCampaignSchema,
+  updateCampaignSchema,
   updateEnemySchema,
   type Character,
   type Quest,
@@ -183,18 +184,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         chainId: null,
       });
 
-      // Clear existing messages and add welcome message for the new adventure
+      // Clear existing messages and generate enhanced welcome message
       await storage.clearMessages();
 
+      // Get character for enhanced message context
+      const character = await storage.getCharacter();
+      
+      // Generate enhanced welcome message using AI
+      const enhancedWelcomeResponse = await aiService.generateEnhancedWelcomeMessage(template, character);
+      
       const welcomeMessage = await storage.createMessage({
-        content: `Welcome to ${template.name}! You find yourself in ${template.initialScene}. ${template.initialQuest.description}`,
-        sender: "dm",
-        senderName: null,
+        content: enhancedWelcomeResponse.content,
+        sender: enhancedWelcomeResponse.sender,
+        senderName: enhancedWelcomeResponse.senderName,
         timestamp: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         }),
       });
+
+      // Apply any game state updates from the enhanced welcome
+      if (enhancedWelcomeResponse.actions?.updateGameState) {
+        await storage.updateGameState(enhancedWelcomeResponse.actions.updateGameState);
+      }
 
       res.json({
         success: true,
@@ -813,7 +825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Conversation endpoints
   app.post("/api/ai/chat", async (req, res) => {
     try {
-      const { message } = req.body;
+      const { message, isDirectDM } = req.body;
       if (!message || typeof message !== "string") {
         return res.status(400).json({ error: "Message is required" });
       }
@@ -821,7 +833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate AI response with fallback handling
       let aiResponse;
       try {
-        aiResponse = await aiService.generateResponse(message);
+        aiResponse = await aiService.generateResponse(message, isDirectDM || false);
       } catch (aiError: any) {
         console.error("AI response generation failed:", aiError);
 
@@ -1222,6 +1234,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating campaign:", error);
       res.status(500).json({ error: "Failed to create campaign" });
+    }
+  });
+
+  app.patch("/api/campaigns/:id", async (req, res) => {
+    try {
+      const result = updateCampaignSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({
+          error: "Invalid campaign data",
+          details: result.error.errors,
+        });
+      }
+
+      const campaign = await storage.updateCampaign(req.params.id, result.data);
+      if (!campaign) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      res.json(campaign);
+    } catch (error) {
+      console.error("Error updating campaign:", error);
+      res.status(500).json({ error: "Failed to update campaign" });
     }
   });
 

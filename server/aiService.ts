@@ -152,12 +152,10 @@ Remember to respond as the character or DM that makes most sense for the context
     return prompt;
   }
 
-  async generateResponse(playerMessage: string): Promise<AIResponse> {
+  async generateEnhancedWelcomeMessage(template: any, character: Character | undefined): Promise<AIResponse> {
     try {
-      // Get current game context
-      const context = await this.getGameContext();
-      const contextPrompt = this.createContextPrompt(context);
-
+      const gameContext = await this.getGameContext();
+      
       const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
         {
           role: "system",
@@ -165,15 +163,135 @@ Remember to respond as the character or DM that makes most sense for the context
         },
         {
           role: "user", 
-          content: `${contextPrompt}
+          content: `Generate an immersive and engaging opening message for a new TTRPG adventure with the following details:
 
-PLAYER ACTION: ${playerMessage}
+ADVENTURE TEMPLATE:
+- Name: ${template.name}
+- Setting: ${template.setting}
+- Initial Scene: ${template.initialScene}
+- Initial Quest: ${template.initialQuest.title} - ${template.initialQuest.description}
+
+CHARACTER DETAILS:
+${character ? `
+- Name: ${character.name}
+- Class: ${character.class}
+- Level: ${character.level}
+- Current Health: ${character.currentHealth}/${character.maxHealth}
+- Key Stats: STR ${character.strength}, DEX ${character.dexterity}, CON ${character.constitution}, INT ${character.intelligence}, WIS ${character.wisdom}, CHA ${character.charisma}
+` : '- Character details not yet available'}
+
+Create a rich, atmospheric opening that includes:
+1. A vivid description of the initial scene and atmosphere
+2. Recognition of the character (if available) and their current situation
+3. Clear setup of the immediate quest/objective
+4. 3-4 specific action options the player can choose from
+5. Immersive world-building details that hook the player into the story
+
+The message should feel like the opening scene of an epic adventure, setting the tone for an engaging campaign. Make the player feel immediately invested in their character and the world.
+
+Format your response as JSON with this structure:
+{
+  "content": "Your immersive opening message as DM",
+  "sender": "dm",
+  "senderName": null,
+  "actions": {
+    "updateGameState": { "currentScene": "${template.initialScene}", "inCombat": false }
+  }
+}`
+        }
+      ];
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-5",
+        messages,
+        response_format: { type: "json_object" },
+      });
+
+      const aiResponse = JSON.parse(response.choices[0].message.content || '{}');
+      
+      return {
+        content: aiResponse.content || `Welcome to ${template.name}! You find yourself in ${template.initialScene}. ${template.initialQuest.description}`,
+        sender: 'dm',
+        senderName: null,
+        actions: aiResponse.actions || {
+          updateGameState: { 
+            currentScene: template.initialScene, 
+            inCombat: false
+          }
+        }
+      };
+
+    } catch (error: any) {
+      console.error('Error generating enhanced welcome message:', error);
+      
+      // Fallback to enhanced static message
+      const characterIntro = character ? ` ${character.name}, a level ${character.level} ${character.class},` : '';
+      
+      return {
+        content: `🏰 **Welcome to ${template.name}!** 🏰
+
+You${characterIntro} find yourself in ${template.initialScene}. The air is thick with possibility and adventure beckons from every shadow.
+
+**Current Objective:** ${template.initialQuest.description}
+
+**What would you like to do?**
+• 🗡️ **Investigate** your immediate surroundings
+• 💬 **Speak** to any nearby NPCs
+• 🎒 **Check** your equipment and supplies  
+• 🏃 **Move** toward your objective
+
+Choose your path, adventurer. Your destiny awaits!`,
+        sender: 'dm',
+        senderName: null,
+        actions: {
+          updateGameState: { 
+            currentScene: template.initialScene, 
+            inCombat: false
+          }
+        }
+      };
+    }
+  }
+
+  async generateResponse(playerMessage: string, isDirectDM: boolean = false): Promise<AIResponse> {
+    try {
+      // Get current game context
+      const context = await this.getGameContext();
+      const contextPrompt = this.createContextPrompt(context);
+
+      // Strip any UI prefixes if they exist
+      const cleanMessage = playerMessage.replace(/^\[Direct DM\]\s*/, '');
+      
+      const systemPrompt = isDirectDM 
+        ? this.getSystemPrompt() + `
+
+DIRECT DM MODE: The player is speaking out-of-character directly to you as the DM. Respond as yourself (the DM) in a helpful, meta-game manner. Do not roleplay as NPCs or maintain in-character immersion. Help with rules clarification, game mechanics, story questions, or campaign management.`
+        : this.getSystemPrompt();
+
+      const userPrompt = isDirectDM
+        ? `${contextPrompt}
+
+DIRECT DM QUESTION: ${cleanMessage}
+
+Please respond as the DM out-of-character. This is a meta-game conversation about the campaign, rules, mechanics, or story. Be helpful and informative while maintaining the game's fun factor.`
+        : `${contextPrompt}
+
+PLAYER ACTION: ${cleanMessage}
 
 Please respond as the DM or appropriate NPC. Provide an engaging response that:
 1. Acknowledges the player's action
 2. Describes what happens as a result
 3. Advances the story appropriately
-4. Maintains immersion and atmosphere
+4. Maintains immersion and atmosphere`;
+
+      const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        {
+          role: "user", 
+          content: `${userPrompt}
 
 Format your response as JSON with this structure:
 {
@@ -185,7 +303,7 @@ Format your response as JSON with this structure:
     "updateQuest": { "id": "quest-id", "updates": { "progress": 2, "status": "completed" } },
     "createQuest": { "title": "Quest Title", "description": "Clear objectives", "status": "active", "priority": "high|normal|low", "progress": 0, "maxProgress": 3, "reward": "Experience/items/gold" },
     "updateCharacter": { "updates": { "currentHealth": 45, "experience": 150, "level": 2 } },
-    "updateGameState": { "currentScene": "Location Name", "inCombat": false, "timeOfDay": "morning", "weather": "clear" },
+    "updateGameState": { "currentScene": "Location Name", "inCombat": false },
     "giveItem": { "name": "Item Name", "type": "weapon|armor|consumable|misc", "description": "Item description", "quantity": 1, "rarity": "common|uncommon|rare|epic|legendary", "equipped": false }
   }
 }

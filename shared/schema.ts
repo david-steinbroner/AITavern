@@ -107,7 +107,7 @@ export const insertGameStateSchema = createInsertSchema(gameState);
 export const insertCampaignSchema = createInsertSchema(campaigns);
 
 // Update schemas for partial updates
-export const updateCharacterSchema = insertCharacterSchema.omit({ name: true, class: true }).partial();
+export const updateCharacterSchema = insertCharacterSchema.omit({ class: true }).partial();
 export const updateQuestSchema = insertQuestSchema.partial();
 export const updateItemSchema = insertItemSchema.partial();
 export const updateEnemySchema = insertEnemySchema.partial();
