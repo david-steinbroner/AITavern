@@ -62,7 +62,7 @@ export default function NavigationTabs({
             key={tab.id}
             variant={activeTab === tab.id ? "default" : "ghost"}
             onClick={() => handleTabClick(tab.id)}
-            className="relative h-16 flex flex-col items-center justify-center px-2"
+            className="relative h-16 flex flex-col items-center justify-center px-2 min-w-[44px] touch-manipulation"
             data-testid={`tab-${tab.id}`}
           >
             <div className="relative">
@@ -76,7 +76,7 @@ export default function NavigationTabs({
                 </Badge>
               )}
             </div>
-            <span className="text-xs mt-1 font-medium">{tab.label}</span>
+            <span className="text-xs mt-1 font-medium leading-tight">{tab.label}</span>
           </Button>
         ))}
       </div>

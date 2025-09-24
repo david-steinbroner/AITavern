@@ -11,13 +11,17 @@ import QuestLog from "./components/QuestLog";
 import Inventory from "./components/Inventory";
 import ChatInterface from "./components/ChatInterface";
 import CombatInterface from "./components/CombatInterface";
+import StartMenu from "./components/StartMenu";
+import UserGuide from "./components/UserGuide";
 
 // Types
 import type { Character, Quest, Item, Message, Enemy, GameState } from "@shared/schema";
 
 type TabType = "character" | "quests" | "inventory" | "chat";
+type ViewType = "startMenu" | "userGuide" | "game";
 
 function GameApp() {
+  const [currentView, setCurrentView] = useState<ViewType>("startMenu");
   const [activeTab, setActiveTab] = useState<TabType>("character");
   const [isListening, setIsListening] = useState(false);
   
@@ -255,6 +259,23 @@ function GameApp() {
     document.documentElement.classList.add('dark');
   }, []);
   
+  // Handle different views
+  if (currentView === "startMenu") {
+    return (
+      <StartMenu 
+        onStartGame={() => setCurrentView("game")}
+        onShowGuide={() => setCurrentView("userGuide")}
+      />
+    );
+  }
+
+  if (currentView === "userGuide") {
+    return (
+      <UserGuide onBack={() => setCurrentView("startMenu")} />
+    );
+  }
+
+  // Main game view
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Page Title */}
