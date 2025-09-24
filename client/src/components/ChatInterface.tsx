@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Mic, MicOff, Send, Swords, Eye, MessageSquare } from "lucide-react";
+import { Mic, MicOff, Send, Swords, Eye, MessageSquare, Loader2 } from "lucide-react";
 import type { Message } from "@shared/schema";
 import { useState, useRef, useEffect } from "react";
 
@@ -12,6 +12,7 @@ interface ChatInterfaceProps {
   onQuickAction?: (action: string) => void;
   isListening?: boolean;
   onToggleListening?: () => void;
+  isLoading?: boolean;
   className?: string;
 }
 
@@ -21,6 +22,7 @@ export default function ChatInterface({
   onQuickAction,
   isListening = false,
   onToggleListening,
+  isLoading = false,
   className = "" 
 }: ChatInterfaceProps) {
   const [inputText, setInputText] = useState("");
@@ -104,6 +106,14 @@ export default function ChatInterface({
                   </div>
                 ))
               )}
+              
+              {/* AI Thinking Indicator */}
+              {isLoading && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 animate-pulse">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <p className="text-sm text-muted-foreground">The DM is thinking...</p>
+                </div>
+              )}
             </div>
           </ScrollArea>
           
@@ -117,6 +127,7 @@ export default function ChatInterface({
                   variant="outline" 
                   size="sm"
                   onClick={() => handleQuickAction(action.action)}
+                  disabled={isLoading}
                   className="flex-1"
                   data-testid={`quick-action-${action.action}`}
                 >
@@ -147,13 +158,13 @@ export default function ChatInterface({
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleSend()}
                 className="flex-1 px-3 py-2 bg-muted rounded-md text-sm text-foreground placeholder:text-muted-foreground border-none focus:outline-none focus:ring-2 focus:ring-primary"
-                disabled={isListening}
+                disabled={isListening || isLoading}
                 data-testid="input-chat-message"
               />
               <Button 
                 size="icon" 
                 onClick={handleSend} 
-                disabled={!inputText.trim() || isListening}
+                disabled={!inputText.trim() || isListening || isLoading}
                 data-testid="button-send-message"
               >
                 <Send className="w-4 h-4" />

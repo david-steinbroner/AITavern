@@ -12,6 +12,7 @@ import {
   type Item
 } from "@shared/schema";
 import { z } from "zod";
+import { aiService } from "./aiService";
 
 // Validation schemas for updates
 const updateCharacterSchema = insertCharacterSchema.partial().refine(
@@ -332,6 +333,212 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating game state:', error);
       res.status(500).json({ error: "Failed to update game state" });
+    }
+  });
+
+  // AI Conversation endpoints
+  app.post("/api/ai/chat", async (req, res) => {
+    try {
+      const { message } = req.body;
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      // Generate AI response
+      const aiResponse = await aiService.generateResponse(message);
+
+      // Store the player message
+      await storage.createMessage({
+        content: message,
+        sender: 'player',
+        senderName: null,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+
+      // Store the AI response
+      const aiMessage = await storage.createMessage({
+        content: aiResponse.content,
+        sender: aiResponse.sender,
+        senderName: aiResponse.senderName,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+
+      // Apply any game actions from the AI response with validation
+      if (aiResponse.actions) {
+        const actions = aiResponse.actions;
+        
+        // Update quest if specified
+        if (actions.updateQuest) {
+          const questValidation = updateQuestSchema.safeParse(actions.updateQuest.updates);
+          if (questValidation.success) {
+            await storage.updateQuest(actions.updateQuest.id, questValidation.data);
+          } else {
+            console.warn('Invalid AI quest update:', questValidation.error.errors);
+          }
+        }
+
+        // Create new quest if specified
+        if (actions.createQuest) {
+          const questValidation = insertQuestSchema.safeParse(actions.createQuest);
+          if (questValidation.success) {
+            await storage.createQuest(questValidation.data);
+          } else {
+            console.warn('Invalid AI quest creation:', questValidation.error.errors);
+          }
+        }
+
+        // Update character if specified
+        if (actions.updateCharacter) {
+          const character = await storage.getCharacter();
+          if (character) {
+            const charValidation = updateCharacterSchema.safeParse(actions.updateCharacter.updates);
+            if (charValidation.success) {
+              await storage.updateCharacter(character.id, charValidation.data);
+            } else {
+              console.warn('Invalid AI character update:', charValidation.error.errors);
+            }
+          }
+        }
+
+        // Update game state if specified
+        if (actions.updateGameState) {
+          const gameStateValidation = insertGameStateSchema.partial().safeParse(actions.updateGameState);
+          if (gameStateValidation.success) {
+            await storage.updateGameState(gameStateValidation.data);
+          } else {
+            console.warn('Invalid AI game state update:', gameStateValidation.error.errors);
+          }
+        }
+
+        // Give item if specified
+        if (actions.giveItem) {
+          const itemValidation = insertItemSchema.safeParse(actions.giveItem);
+          if (itemValidation.success) {
+            await storage.createItem(itemValidation.data);
+          } else {
+            console.warn('Invalid AI item creation:', itemValidation.error.errors);
+          }
+        }
+      }
+
+      res.json({
+        message: aiMessage,
+        actions: aiResponse.actions
+      });
+
+    } catch (error) {
+      console.error('Error in AI chat:', error);
+      res.status(500).json({ error: "Failed to process AI conversation" });
+    }
+  });
+
+  // Quick action endpoint for predefined actions
+  app.post("/api/ai/quick-action", async (req, res) => {
+    try {
+      const { action } = req.body;
+      if (!action || typeof action !== 'string') {
+        return res.status(400).json({ error: "Action is required" });
+      }
+
+      let actionMessage = '';
+      switch (action) {
+        case 'attack':
+          actionMessage = 'I ready my weapon and prepare to attack!';
+          break;
+        case 'investigate':
+          actionMessage = 'I carefully examine my surroundings for clues and details.';
+          break;
+        case 'talk':
+          actionMessage = 'I attempt to communicate and engage in dialogue.';
+          break;
+        case 'defend':
+          actionMessage = 'I take a defensive stance and prepare to protect myself.';
+          break;
+        case 'cast':
+          actionMessage = 'I prepare to cast a spell or use magic.';
+          break;
+        case 'use-item':
+          actionMessage = 'I look through my items to find something useful.';
+          break;
+        default:
+          actionMessage = `I perform the ${action} action.`;
+      }
+
+      // Process the quick action as a regular chat message
+      const aiResponse = await aiService.generateResponse(actionMessage);
+
+      // Store messages and apply actions (same as regular chat)
+      await storage.createMessage({
+        content: actionMessage,
+        sender: 'player',
+        senderName: null,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+
+      const aiMessage = await storage.createMessage({
+        content: aiResponse.content,
+        sender: aiResponse.sender,
+        senderName: aiResponse.senderName,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+
+      // Apply actions if any with validation
+      if (aiResponse.actions) {
+        const actions = aiResponse.actions;
+        
+        if (actions.updateQuest) {
+          const questValidation = updateQuestSchema.safeParse(actions.updateQuest.updates);
+          if (questValidation.success) {
+            await storage.updateQuest(actions.updateQuest.id, questValidation.data);
+          } else {
+            console.warn('Invalid AI quest update:', questValidation.error.errors);
+          }
+        }
+        if (actions.createQuest) {
+          const questValidation = insertQuestSchema.safeParse(actions.createQuest);
+          if (questValidation.success) {
+            await storage.createQuest(questValidation.data);
+          } else {
+            console.warn('Invalid AI quest creation:', questValidation.error.errors);
+          }
+        }
+        if (actions.updateCharacter) {
+          const character = await storage.getCharacter();
+          if (character) {
+            const charValidation = updateCharacterSchema.safeParse(actions.updateCharacter.updates);
+            if (charValidation.success) {
+              await storage.updateCharacter(character.id, charValidation.data);
+            } else {
+              console.warn('Invalid AI character update:', charValidation.error.errors);
+            }
+          }
+        }
+        if (actions.updateGameState) {
+          const gameStateValidation = insertGameStateSchema.partial().safeParse(actions.updateGameState);
+          if (gameStateValidation.success) {
+            await storage.updateGameState(gameStateValidation.data);
+          } else {
+            console.warn('Invalid AI game state update:', gameStateValidation.error.errors);
+          }
+        }
+        if (actions.giveItem) {
+          const itemValidation = insertItemSchema.safeParse(actions.giveItem);
+          if (itemValidation.success) {
+            await storage.createItem(itemValidation.data);
+          } else {
+            console.warn('Invalid AI item creation:', itemValidation.error.errors);
+          }
+        }
+      }
+
+      res.json({
+        message: aiMessage,
+        actions: aiResponse.actions
+      });
+
+    } catch (error) {
+      console.error('Error in quick action:', error);
+      res.status(500).json({ error: "Failed to process quick action" });
     }
   });
 
