@@ -24,6 +24,11 @@ export const characters = pgTable("characters", {
   maxHealth: integer("max_health").notNull(),
   currentMana: integer("current_mana").default(0).notNull(),
   maxMana: integer("max_mana").default(0).notNull(),
+  
+  // Character Appearance
+  portraitUrl: text("portrait_url"),
+  appearance: text("appearance"),
+  backstory: text("backstory"),
 });
 
 // Quest Schema

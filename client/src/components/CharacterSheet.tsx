@@ -1,5 +1,9 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Scroll } from "lucide-react";
 import StatDisplay from "./StatDisplay";
 import HealthBar from "./HealthBar";
 import EditableCharacterName from "./EditableCharacterName";
@@ -11,23 +15,62 @@ interface CharacterSheetProps {
 }
 
 export default function CharacterSheet({ character, className = "" }: CharacterSheetProps) {
+  const [showBackstory, setShowBackstory] = useState(false);
+
   return (
     <div className={`space-y-4 ${className}`} data-testid="character-sheet">
-      {/* Character Header */}
+      {/* Character Header with Portrait */}
       <Card>
         <CardHeader className="text-center pb-2">
-          <div className="flex justify-center">
-            <EditableCharacterName
-              characterName={character.name}
-              characterId={character.id}
-            />
-          </div>
-          <div className="flex justify-center space-x-2">
-            <Badge variant="secondary" data-testid="character-class">{character.class}</Badge>
-            <Badge variant="outline" data-testid="character-level">Level {character.level}</Badge>
+          <div className="flex flex-col items-center space-y-3">
+            {/* Character Portrait */}
+            <Avatar className="w-20 h-20 border-2 border-primary/20">
+              <AvatarImage 
+                src={character.portraitUrl || ''} 
+                alt={`${character.name} portrait`} 
+                data-testid="character-portrait"
+              />
+              <AvatarFallback className="text-lg font-semibold bg-primary/10">
+                {character.name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            
+            <div className="flex justify-center">
+              <EditableCharacterName
+                characterName={character.name}
+                characterId={character.id}
+              />
+            </div>
+            
+            <div className="flex justify-center space-x-2">
+              <Badge variant="secondary" data-testid="character-class">{character.class}</Badge>
+              <Badge variant="outline" data-testid="character-level">Level {character.level}</Badge>
+            </div>
+            
+            {/* Backstory Button */}
+            <Button
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowBackstory(!showBackstory)}
+              className="text-xs"
+              data-testid="button-backstory"
+            >
+              <Scroll className="w-3 h-3 mr-1" />
+              {showBackstory ? 'Hide' : 'View'} Backstory
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Backstory Display */}
+          {showBackstory && character.backstory && (
+            <div className="bg-muted/20 p-4 rounded-lg border-l-4 border-primary/30">
+              <h4 className="font-medium text-sm mb-2 text-primary">Character Backstory</h4>
+              <p className="text-sm text-muted-foreground leading-relaxed" data-testid="character-backstory">
+                {character.backstory}
+              </p>
+            </div>
+          )}
+          
           {/* Health and Mana */}
           <div className="space-y-3">
             <HealthBar 

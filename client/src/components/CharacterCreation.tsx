@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,10 @@ import {
   Wand2, 
   RefreshCw,
   ArrowRight,
-  ArrowLeft 
+  ArrowLeft,
+  Dice6,
+  Upload,
+  Image
 } from "lucide-react";
 import CharacterQuestionnaire, { type CharacterQuestionnaireResults } from "./CharacterQuestionnaire";
 import AbilityScoreRoller, { type AbilityScores } from "./AbilityScoreRoller";
@@ -47,11 +50,47 @@ export default function CharacterCreation({
     backstory: ""
   });
   const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleBasicsSubmit = () => {
     if (character.name.trim() && character.appearance.trim() && character.backstory.trim()) {
       setCurrentStep("portrait");
     }
+  };
+
+  const generateRandomCharacter = () => {
+    const randomNames = [
+      "Aldric", "Lyra", "Theron", "Kira", "Gareth", "Nora", "Daven", "Zara",
+      "Ren", "Mira", "Torin", "Sela", "Bran", "Vera", "Cade", "Iris"
+    ];
+    
+    const randomAppearances = [
+      "A tall figure with piercing blue eyes and silver hair that catches the light",
+      "A sturdy build with warm brown eyes and auburn hair braided with leather cords",
+      "An athletic frame with emerald green eyes and raven-black hair swept back",
+      "A lean stature with golden amber eyes and honey-blonde hair adorned with small braids",
+      "A compact build with deep violet eyes and copper-red hair that seems to glow",
+      "A graceful figure with storm-grey eyes and platinum hair that flows like silk"
+    ];
+    
+    const randomBackstories = [
+      "Raised in a small mountain village, I learned the ways of survival from an early age. When mysterious creatures began threatening our home, I set out to discover the source and protect those I care about.",
+      "Born into a family of traveling merchants, I've seen many lands and peoples. After witnessing an ancient evil stirring in the far reaches, I've decided to take up arms to prevent a coming darkness.",
+      "Once a scholar in the great libraries, I discovered forbidden knowledge that changed everything. Now I seek to use what I've learned to right the wrongs of the past and forge a better future.",
+      "Growing up on the streets taught me to be resourceful and quick-witted. When I stumbled upon a conspiracy that threatens the realm, I realized my unique skills could make all the difference.",
+      "Trained from childhood in the sacred arts by my mentor, I was sent into the world when dark omens appeared. My mission is to find the source of this corruption and cleanse it before it spreads.",
+      "After losing everything to a great catastrophe, I wandered the wilderness learning from hermits and wise creatures. Now I return to civilization with new purpose and ancient wisdom."
+    ];
+
+    const randomName = randomNames[Math.floor(Math.random() * randomNames.length)];
+    const randomAppearance = randomAppearances[Math.floor(Math.random() * randomAppearances.length)];
+    const randomBackstory = randomBackstories[Math.floor(Math.random() * randomBackstories.length)];
+
+    setCharacter({
+      name: randomName,
+      appearance: randomAppearance,
+      backstory: randomBackstory
+    });
   };
 
   const generatePortrait = async () => {
@@ -76,6 +115,34 @@ export default function CharacterCreation({
     } finally {
       setIsGeneratingPortrait(false);
     }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image must be smaller than 5MB');
+        return;
+      }
+
+      // Create object URL for preview
+      const objectUrl = URL.createObjectURL(file);
+      setCharacter(prev => ({ 
+        ...prev, 
+        portraitUrl: objectUrl 
+      }));
+    }
+  };
+
+  const triggerFileUpload = () => {
+    fileInputRef.current?.click();
   };
 
   const renderBasicsStep = () => (
@@ -128,23 +195,37 @@ export default function CharacterCreation({
           />
         </div>
 
-        <div className="flex justify-between pt-4">
-          <Button
-            variant="outline"
-            onClick={onBack}
-            data-testid="button-character-back"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Menu
-          </Button>
-          <Button
-            onClick={handleBasicsSubmit}
-            disabled={!character.name.trim() || !character.appearance.trim() || !character.backstory.trim()}
-            data-testid="button-character-continue"
-          >
-            Continue
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
+        <div className="pt-4 space-y-4">
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              onClick={generateRandomCharacter}
+              className="w-full"
+              data-testid="button-random-character"
+            >
+              <Dice6 className="w-4 h-4 mr-2" />
+              Quick Start - Generate Random Character
+            </Button>
+          </div>
+          
+          <div className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={onBack}
+              data-testid="button-character-back"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Menu
+            </Button>
+            <Button
+              onClick={handleBasicsSubmit}
+              disabled={!character.name.trim() || !character.appearance.trim() || !character.backstory.trim()}
+              data-testid="button-character-continue"
+            >
+              Continue
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -181,6 +262,14 @@ export default function CharacterCreation({
                   <RefreshCw className={`w-4 h-4 mr-2 ${isGeneratingPortrait ? 'animate-spin' : ''}`} />
                   Generate New Portrait
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={triggerFileUpload}
+                  data-testid="button-upload-portrait"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Your Own
+                </Button>
               </div>
             </div>
           ) : (
@@ -198,15 +287,26 @@ export default function CharacterCreation({
                   </div>
                 )}
               </div>
-              <Button
-                onClick={generatePortrait}
-                disabled={isGeneratingPortrait}
-                className="w-full"
-                data-testid="button-generate-portrait"
-              >
-                <Wand2 className="w-4 h-4 mr-2" />
-                Generate Portrait with AI
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  onClick={generatePortrait}
+                  disabled={isGeneratingPortrait}
+                  className="w-full"
+                  data-testid="button-generate-portrait"
+                >
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  Generate Portrait with AI
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={triggerFileUpload}
+                  className="w-full"
+                  data-testid="button-upload-portrait"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Your Own Image
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -215,6 +315,16 @@ export default function CharacterCreation({
           <h4 className="font-medium mb-2">Appearance Description:</h4>
           <p className="text-sm text-muted-foreground">"{character.appearance}"</p>
         </div>
+
+        {/* Hidden file input for portrait upload */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileUpload}
+          className="hidden"
+          data-testid="file-input-portrait"
+        />
 
         <div className="flex justify-between pt-4">
           <Button
