@@ -312,7 +312,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             currentTurn: null,
             turnCount: 0
           });
-        }
         } else {
           // Toggle turn after player action
           const newTurn = currentGameState.currentTurn === 'player' ? 'enemy' : 'player';
