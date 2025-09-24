@@ -7,6 +7,7 @@ import { Scroll } from "lucide-react";
 import StatDisplay from "./StatDisplay";
 import HealthBar from "./HealthBar";
 import EditableCharacterName from "./EditableCharacterName";
+import GameTooltip from "./GameTooltip";
 import type { Character } from "@shared/schema";
 
 interface CharacterSheetProps {
@@ -43,8 +44,22 @@ export default function CharacterSheet({ character, className = "" }: CharacterS
             </div>
             
             <div className="flex justify-center space-x-2">
-              <Badge variant="secondary" data-testid="character-class">{character.class}</Badge>
-              <Badge variant="outline" data-testid="character-level">Level {character.level}</Badge>
+              <div className="flex items-center space-x-1">
+                <Badge variant="secondary" data-testid="character-class">{character.class}</Badge>
+                <GameTooltip 
+                  content="Your character's class determines their abilities, skills, and role in combat and adventures." 
+                  testId="tooltip-class"
+                  ariaLabel="Learn about character classes"
+                />
+              </div>
+              <div className="flex items-center space-x-1">
+                <Badge variant="outline" data-testid="character-level">Level {character.level}</Badge>
+                <GameTooltip 
+                  content="Character level represents your overall power and experience. Higher levels unlock new abilities and increase your stats." 
+                  testId="tooltip-level"
+                  ariaLabel="Learn about character levels"
+                />
+              </div>
             </div>
             
             {/* Backstory Button */}
@@ -90,7 +105,14 @@ export default function CharacterSheet({ character, className = "" }: CharacterS
           {/* Experience */}
           <div className="space-y-1">
             <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-foreground">Experience</span>
+              <div className="flex items-center space-x-1">
+                <span className="text-sm font-medium text-foreground">Experience</span>
+                <GameTooltip 
+                  content="Experience points (XP) are earned by completing quests, defeating enemies, and accomplishing goals. Collect enough XP to level up!" 
+                  testId="tooltip-experience"
+                  ariaLabel="Learn about experience points"
+                />
+              </div>
               <span className="text-sm text-muted-foreground">{character.experience} XP</span>
             </div>
             <div className="w-full bg-muted rounded-full h-2">
@@ -110,7 +132,14 @@ export default function CharacterSheet({ character, className = "" }: CharacterS
       {/* Ability Scores */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-serif">Ability Scores</CardTitle>
+          <div className="flex items-center space-x-2">
+            <CardTitle className="text-lg font-serif">Ability Scores</CardTitle>
+            <GameTooltip 
+              content="Ability scores determine your character's natural talents and capabilities. Higher scores mean better performance in related actions and skills." 
+              testId="tooltip-abilities"
+              ariaLabel="Learn about ability scores"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">

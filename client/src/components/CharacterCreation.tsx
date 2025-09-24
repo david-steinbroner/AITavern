@@ -107,10 +107,10 @@ export default function CharacterCreation({
       }));
     } catch (error) {
       console.error('Failed to generate portrait:', error);
-      // Fallback to placeholder if generation fails
+      // Leave portraitUrl empty to use AvatarFallback instead
       setCharacter(prev => ({ 
         ...prev, 
-        portraitUrl: `https://picsum.photos/256/256?random=${Date.now()}` 
+        portraitUrl: '' 
       }));
     } finally {
       setIsGeneratingPortrait(false);
