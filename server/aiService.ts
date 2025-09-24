@@ -216,12 +216,76 @@ QUEST PROGRESSION RULES:
         actions: aiResponse.actions || undefined
       };
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating AI response:', error);
       
-      // Fallback response
+      // Enhanced error handling based on error type
+      let fallbackContent = "";
+      let shouldRetry = false;
+      
+      if (error?.status === 429) {
+        // Rate limit exceeded
+        fallbackContent = "The magical energies are overwhelmed at the moment. Let me provide guidance based on your current situation...";
+      } else if (error?.status === 401) {
+        // API key issue
+        fallbackContent = "The connection to the mystical realm is blocked. I'll guide you using my earthly knowledge...";
+      } else if (error?.code === 'ENOTFOUND' || error?.code === 'ECONNREFUSED') {
+        // Network issues
+        fallbackContent = "The ethereal connection wavers... Let me consult the ancient texts...";
+        shouldRetry = true;
+      } else {
+        // Generic error
+        fallbackContent = "The DM senses disturbance in the magical weave but continues the adventure...";
+      }
+      
+      // Provide contextual fallback based on player message
+      const contextualResponse = this.generateFallbackResponse(playerMessage, fallbackContent);
+      
+      return contextualResponse;
+    }
+  }
+
+  private generateFallbackResponse(playerMessage: string, errorMessage: string): AIResponse {
+    const lowerMessage = playerMessage.toLowerCase();
+    
+    // Analyze the player's message to provide contextual responses
+    if (lowerMessage.includes('attack') || lowerMessage.includes('fight') || lowerMessage.includes('combat')) {
       return {
-        content: "The mystic forces seem disrupted... The DM needs a moment to gather their thoughts.",
+        content: `${errorMessage} Your aggressive stance is noted. You prepare for combat, weapon at the ready.`,
+        sender: 'dm',
+        senderName: null,
+        actions: {
+          updateGameState: { inCombat: true }
+        }
+      };
+    } else if (lowerMessage.includes('explore') || lowerMessage.includes('look') || lowerMessage.includes('search')) {
+      return {
+        content: `${errorMessage} You carefully examine your surroundings, taking note of every detail.`,
+        sender: 'dm',
+        senderName: null
+      };
+    } else if (lowerMessage.includes('talk') || lowerMessage.includes('speak') || lowerMessage.includes('conversation')) {
+      return {
+        content: `${errorMessage} The NPCs around you seem ready to engage in conversation.`,
+        sender: 'dm',
+        senderName: null
+      };
+    } else if (lowerMessage.includes('quest') || lowerMessage.includes('mission') || lowerMessage.includes('task')) {
+      return {
+        content: `${errorMessage} Your journal reminds you of your current objectives and the path ahead.`,
+        sender: 'dm',
+        senderName: null
+      };
+    } else if (lowerMessage.includes('rest') || lowerMessage.includes('sleep') || lowerMessage.includes('heal')) {
+      return {
+        content: `${errorMessage} You take a moment to rest and recover your strength.`,
+        sender: 'dm',
+        senderName: null
+      };
+    } else {
+      // Generic helpful response
+      return {
+        content: `${errorMessage} The adventure continues. What would you like to do next? You can explore, talk to NPCs, check your quests, or engage in combat.`,
         sender: 'dm',
         senderName: null
       };

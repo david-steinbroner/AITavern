@@ -2,7 +2,7 @@ import { queryClient, apiRequest } from "./lib/queryClient";
 import { QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 // Components
 import NavigationTabs from "./components/NavigationTabs";
@@ -134,6 +134,11 @@ function GameApp() {
       }, 3000);
     }
   };
+  
+  // Stable enemy action callback to prevent useEffect reset in CombatInterface
+  const handleEnemyAction = useCallback(() => {
+    combatActionMutation.mutate({ action: 'enemy-turn' });
+  }, [combatActionMutation]);
   
   const handleCombatAction = {
     attack: (targetId: string) => {
@@ -285,6 +290,7 @@ function GameApp() {
         onCastSpell={handleCombatAction.spell}
         onUseItem={handleCombatAction.item}
         onFlee={handleCombatAction.flee}
+        onEnemyAction={handleEnemyAction}
       />
     </div>
   );

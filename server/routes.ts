@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { randomUUID } from "crypto";
 import { storage } from "./storage";
 import { 
   insertCharacterSchema,
@@ -182,6 +183,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case 'flee':
           actionMessage = 'I attempt to flee from combat!';
           break;
+        case 'enemy-turn':
+          // Handle enemy turn automatically without AI (faster, more reliable)
+          const currentGameState = await storage.getGameState();
+          if (currentGameState?.inCombat && currentGameState.combatId) {
+            // Just advance the turn back to player
+            await storage.updateGameState({
+              currentTurn: 'player',
+              turnCount: (currentGameState.turnCount ?? 0) + 1
+            });
+            
+            // Store the enemy turn message for consistency
+            const message = await storage.createMessage({
+              content: "Enemy completes their turn. It's your turn now!",
+              sender: 'dm',
+              senderName: null,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+            
+            return res.json({ message });
+          }
+          return res.status(400).json({ error: "Not in combat" });
         default:
           actionMessage = `I perform the ${action} action.`;
       }

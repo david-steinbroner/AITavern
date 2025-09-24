@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Swords, Shield, Zap, Heart, ArrowLeft, ArrowRight, ArrowUp } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Enemy {
   id: string;
@@ -22,6 +22,7 @@ interface CombatInterfaceProps {
   onCastSpell?: (spellId: string) => void;
   onUseItem?: (itemId: string) => void;
   onFlee?: () => void;
+  onEnemyAction?: () => void;
   className?: string;
 }
 
@@ -34,10 +35,36 @@ export default function CombatInterface({
   onCastSpell,
   onUseItem,
   onFlee,
+  onEnemyAction,
   className = ""
 }: CombatInterfaceProps) {
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
+  const [enemyTurnProgress, setEnemyTurnProgress] = useState(0);
+  
+  // Auto-process enemy turns
+  useEffect(() => {
+    if (currentTurn === "enemy" && isInCombat) {
+      const duration = 3000; // 3 second enemy turn
+      const interval = 50; // Update every 50ms
+      let elapsed = 0;
+      
+      const timer = setInterval(() => {
+        elapsed += interval;
+        const progress = (elapsed / duration) * 100;
+        setEnemyTurnProgress(progress);
+        
+        if (elapsed >= duration) {
+          clearInterval(timer);
+          onEnemyAction?.(); // Process enemy action and advance turn
+        }
+      }, interval);
+      
+      return () => clearInterval(timer);
+    } else {
+      setEnemyTurnProgress(0);
+    }
+  }, [currentTurn, isInCombat, onEnemyAction]);
   
   if (!isInCombat) {
     return null;
@@ -232,7 +259,7 @@ export default function CombatInterface({
             <CardContent className="p-4 text-center">
               <div className="text-muted-foreground">Enemy is taking their turn...</div>
               <div className="mt-2">
-                <Progress value={75} className="w-full h-2" />
+                <Progress value={enemyTurnProgress} className="w-full h-2" data-testid="enemy-turn-progress" />
               </div>
             </CardContent>
           </Card>
