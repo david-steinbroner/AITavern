@@ -1,12 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, HelpCircle, Settings, Sword, Scroll, Dice6, ScrollText, Package, UserPlus } from "lucide-react";
+import { Play, HelpCircle, Settings, Sword, Scroll, Dice6, ScrollText, Package, UserPlus, Map } from "lucide-react";
 
 interface StartMenuProps {
   onStartGame: () => void;
   onShowGuide: () => void;
   onCreateCharacter: () => void;
+  onShowAdventureTemplates: () => void;
   onShowSettings?: () => void;
 }
 
@@ -14,6 +15,7 @@ export default function StartMenu({
   onStartGame, 
   onShowGuide, 
   onCreateCharacter,
+  onShowAdventureTemplates,
   onShowSettings 
 }: StartMenuProps) {
   return (
@@ -60,6 +62,21 @@ export default function StartMenu({
           </Button>
           <p className="text-sm text-muted-foreground mt-3 text-center">
             Design your adventurer with AI-generated portrait
+          </p>
+        </Card>
+
+        <Card className="p-6 hover-elevate">
+          <Button 
+            variant="outline"
+            onClick={onShowAdventureTemplates}
+            className="w-full h-16 text-lg font-semibold"
+            data-testid="button-adventure-templates"
+          >
+            <Map className="w-6 h-6 mr-3" />
+            Adventure Templates
+          </Button>
+          <p className="text-sm text-muted-foreground mt-3 text-center">
+            Choose from preset adventures in familiar worlds
           </p>
         </Card>
 

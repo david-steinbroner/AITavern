@@ -19,6 +19,7 @@ import WelcomeScreen from "./components/WelcomeScreen";
 import DemoTooltip from "./components/DemoTooltip";
 import ThemeToggle from "./components/ThemeToggle";
 import CharacterCreation from "./components/CharacterCreation";
+import AdventureTemplates from "./components/AdventureTemplates";
 import { useTooltips } from "./hooks/useTooltips";
 import { useNotifications } from "./hooks/useNotifications";
 
@@ -26,7 +27,7 @@ import { useNotifications } from "./hooks/useNotifications";
 import type { Character, Quest, Item, Message, Enemy, GameState } from "@shared/schema";
 
 type TabType = "character" | "quests" | "inventory" | "chat";
-type ViewType = "welcome" | "startMenu" | "userGuide" | "characterCreation" | "game";
+type ViewType = "welcome" | "startMenu" | "userGuide" | "characterCreation" | "adventureTemplates" | "game";
 
 function GameApp() {
   const [currentView, setCurrentView] = useState<ViewType>("welcome");
@@ -339,6 +340,7 @@ function GameApp() {
         onStartGame={() => setCurrentView("game")}
         onShowGuide={() => setCurrentView("userGuide")}
         onCreateCharacter={() => setCurrentView("characterCreation")}
+        onShowAdventureTemplates={() => setCurrentView("adventureTemplates")}
       />
     );
   }
@@ -355,6 +357,39 @@ function GameApp() {
         onComplete={(characterData) => {
           console.log('Character created:', characterData);
           setCurrentView("game");
+        }}
+        onBack={() => setCurrentView("startMenu")}
+      />
+    );
+  }
+
+  if (currentView === "adventureTemplates") {
+    return (
+      <AdventureTemplates 
+        onSelectTemplate={async (template) => {
+          console.log('Adventure template selected:', template);
+          
+          try {
+            // Initialize the adventure on the backend
+            await apiRequest('POST', '/api/adventure/initialize', {
+              id: template.id,
+              name: template.name,
+              setting: template.setting,
+              initialScene: template.initialScene,
+              initialQuest: template.initialQuest
+            });
+            
+            // Invalidate queries to refresh data
+            queryClient.invalidateQueries({ queryKey: ['/api/game-state'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/quests'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+            
+            setCurrentView("game");
+          } catch (error) {
+            console.error('Failed to initialize adventure:', error);
+            // Still proceed to game view
+            setCurrentView("game");
+          }
         }}
         onBack={() => setCurrentView("startMenu")}
       />

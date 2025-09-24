@@ -113,6 +113,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Adventure template initialization
+  const adventureTemplateSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    setting: z.string(),
+    initialScene: z.string(),
+    initialQuest: z.object({
+      title: z.string(),
+      description: z.string(),
+      priority: z.enum(["high", "normal", "low"]),
+      maxProgress: z.number()
+    })
+  });
+
+  app.post("/api/adventure/initialize", async (req, res) => {
+    try {
+      const result = adventureTemplateSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: "Invalid adventure template data", details: result.error.errors });
+      }
+
+      const template = result.data;
+      
+      // Update game state with the new adventure
+      await storage.updateGameState({
+        currentScene: template.initialScene,
+        inCombat: false,
+        currentTurn: null,
+        turnCount: 0
+      });
+
+      // Create the initial quest
+      const quest = await storage.createQuest({
+        title: template.initialQuest.title,
+        description: template.initialQuest.description,
+        status: 'active',
+        priority: template.initialQuest.priority,
+        progress: 0,
+        maxProgress: template.initialQuest.maxProgress,
+        reward: "Experience and story progression",
+        isMainStory: true,
+        parentQuestId: null,
+        chainId: null
+      });
+
+      // Clear existing messages and add welcome message for the new adventure
+      await storage.clearMessages();
+      
+      const welcomeMessage = await storage.createMessage({
+        content: `Welcome to ${template.name}! You find yourself in ${template.initialScene}. ${template.initialQuest.description}`,
+        sender: 'dm',
+        senderName: null,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+
+      res.json({ 
+        success: true, 
+        quest,
+        message: welcomeMessage,
+        gameState: await storage.getGameState()
+      });
+    } catch (error) {
+      console.error('Error initializing adventure template:', error);
+      res.status(500).json({ error: 'Failed to initialize adventure template' });
+    }
+  });
+
   // Character portrait generation
   const portraitGenerationSchema = z.object({
     appearance: z.string().min(1).max(500),
