@@ -30,7 +30,11 @@ export default function DemoTooltip({
 
     const updatePosition = () => {
       const targetElement = document.querySelector(step.targetElement);
-      if (!targetElement || !tooltipRef.current) return;
+      if (!targetElement) {
+        console.warn(`Demo target element not found: ${step.targetElement}`);
+        return;
+      }
+      if (!tooltipRef.current) return;
 
       const targetRect = targetElement.getBoundingClientRect();
       const tooltipRect = tooltipRef.current.getBoundingClientRect();

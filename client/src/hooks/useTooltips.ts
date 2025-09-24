@@ -86,15 +86,24 @@ export function useTooltips() {
     try {
       const storedTooltips = localStorage.getItem(TOOLTIP_STORAGE_KEY);
       if (storedTooltips) {
-        setSeenTooltips(new Set(JSON.parse(storedTooltips)));
+        const parsed = JSON.parse(storedTooltips);
+        if (Array.isArray(parsed)) {
+          setSeenTooltips(new Set(parsed));
+        }
       }
       
       const storedDemo = localStorage.getItem(DEMO_STORAGE_KEY);
       if (storedDemo) {
-        setDemoCompleted(JSON.parse(storedDemo));
+        const parsed = JSON.parse(storedDemo);
+        if (typeof parsed === 'boolean') {
+          setDemoCompleted(parsed);
+        }
       }
     } catch (error) {
       console.warn('Failed to load tooltip state:', error);
+      // Reset to safe defaults if localStorage is corrupted
+      setSeenTooltips(new Set());
+      setDemoCompleted(false);
     }
   }, []);
 

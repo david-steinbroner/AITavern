@@ -7,6 +7,8 @@ import { ArrowLeft } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 
 // Components
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ErrorMonitor } from "./components/ErrorMonitor";
 import NavigationTabs from "./components/NavigationTabs";
 import CharacterSheet from "./components/CharacterSheet";
 import QuestLog from "./components/QuestLog";
@@ -399,6 +401,9 @@ function GameApp() {
   // Main game view
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* Error Monitor */}
+      <ErrorMonitor currentView={currentView} activeTab={activeTab} />
+      
       {/* Page Title */}
       <div className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border">
         <div className="flex items-center justify-between h-16 px-3 sm:px-4">
@@ -481,12 +486,14 @@ function GameApp() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <GameApp />
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <GameApp />
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

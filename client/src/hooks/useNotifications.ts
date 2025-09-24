@@ -19,11 +19,20 @@ export function useNotifications() {
       const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
       if (stored) {
         const data = JSON.parse(stored);
-        setNotifications(data.notifications || []);
-        setVisitedTabs(new Set(data.visitedTabs || []));
+        if (data && typeof data === 'object') {
+          if (Array.isArray(data.notifications)) {
+            setNotifications(data.notifications);
+          }
+          if (Array.isArray(data.visitedTabs)) {
+            setVisitedTabs(new Set(data.visitedTabs));
+          }
+        }
       }
     } catch (error) {
       console.warn('Failed to load notification state:', error);
+      // Reset to safe defaults if localStorage is corrupted
+      setNotifications([]);
+      setVisitedTabs(new Set());
     }
   }, []);
 
