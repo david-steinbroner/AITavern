@@ -318,6 +318,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           actionMessage = targetId
             ? `I attack the enemy with ID ${targetId}!`
             : "I launch an attack!";
+          
+          // Use mechanics seam for attack resolution
+          const attackerId = (req as any).user?.id ?? "pc1";
+          const targetAC = Number(req.body?.targetAC ?? 12);
+          const dmgExpr = String(req.body?.damageExpr ?? "1d8+2");
+          const check = abilityCheck({ actorId: attackerId, skill: "attack", difficulty: targetAC });
+          const damage = check.success ? damageRoll(dmgExpr) : 0;
+          
+          // Store combat results for response
+          res.locals.combat = { 
+            system: process.env.GAME_SYSTEM || "dnd5e", 
+            check, 
+            damage, 
+            targetId: targetId ?? null, 
+            dmgExpr, 
+            targetAC 
+          };
           break;
         case "defend":
           actionMessage =
@@ -539,6 +556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         message: aiMessage,
         actions: aiResponse.actions,
+        ...(res.locals.combat && { combat: res.locals.combat }),
       });
     } catch (error) {
       console.error("Error processing combat action:", error);
