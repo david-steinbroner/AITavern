@@ -128,7 +128,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/character", isAuthenticated, async (req, res) => {
     try {
-      const result = insertCharacterSchema.safeParse(req.body);
+      // Create a schema that doesn't require campaignId (we'll add it server-side)
+      const createCharacterSchema = insertCharacterSchema.omit({ campaignId: true });
+      
+      const result = createCharacterSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({
           error: "Invalid character data",
@@ -136,7 +139,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const character = await storage.createCharacter(result.data);
+      // Get the user's active campaign
+      const activeCampaign = await storage.getActiveCampaign();
+      if (!activeCampaign) {
+        return res.status(400).json({ 
+          error: "No active campaign found. Please select or create a campaign first." 
+        });
+      }
+
+      // Add campaignId to character data
+      const characterData = {
+        ...result.data,
+        campaignId: activeCampaign.id
+      };
+
+      const character = await storage.createCharacter(characterData);
       res.json(character);
     } catch (error) {
       console.error("Error creating character:", error);

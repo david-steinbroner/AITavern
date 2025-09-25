@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import CharacterQuestionnaire, { type CharacterQuestionnaireResults } from "./CharacterQuestionnaire";
 import AbilityScoreRoller, { type AbilityScores } from "./AbilityScoreRoller";
+import CharacterTemplates from "./CharacterTemplates";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface CharacterCreationProps {
@@ -36,14 +37,14 @@ interface CharacterData {
   questionnaireResults?: CharacterQuestionnaireResults;
 }
 
-type CreationStep = "basics" | "portrait" | "questionnaire" | "abilities";
+type CreationStep = "templates" | "basics" | "portrait" | "questionnaire" | "abilities";
 
 export default function CharacterCreation({
   onComplete,
   onBack,
   className = ""
 }: CharacterCreationProps) {
-  const [currentStep, setCurrentStep] = useState<CreationStep>("basics");
+  const [currentStep, setCurrentStep] = useState<CreationStep>("templates");
   const [character, setCharacter] = useState<CharacterData>({
     name: "",
     appearance: "",
@@ -329,7 +330,7 @@ export default function CharacterCreation({
         <div className="flex justify-between pt-4">
           <Button
             variant="outline"
-            onClick={() => setCurrentStep("basics")}
+            onClick={() => setCurrentStep(character.race ? "templates" : "basics")}
             data-testid="button-portrait-back"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -347,8 +348,29 @@ export default function CharacterCreation({
     </Card>
   );
 
+  const handleTemplateSelect = (template: any) => {
+    // Convert template to character data format and skip to portrait step
+    setCharacter({
+      name: template.name,
+      appearance: template.appearance,
+      backstory: template.backstory,
+      race: template.race,
+      class: template.class,
+      abilities: template.abilities
+    });
+    setCurrentStep("portrait");
+  };
+
   const renderCurrentStep = () => {
     switch (currentStep) {
+      case "templates":
+        return (
+          <CharacterTemplates
+            onSelectTemplate={handleTemplateSelect}
+            onCreateCustom={() => setCurrentStep("basics")}
+            onBack={onBack}
+          />
+        );
       case "basics":
         return renderBasicsStep();
       case "portrait":
@@ -373,7 +395,7 @@ export default function CharacterCreation({
         return (
           <AbilityScoreRoller
             character={character}
-            suggestedAbilities={character.questionnaireResults?.suggestedAbilities || {
+            suggestedAbilities={character.abilities || character.questionnaireResults?.suggestedAbilities || {
               strength: 10, dexterity: 10, constitution: 10,
               intelligence: 10, wisdom: 10, charisma: 10
             }}
@@ -422,36 +444,38 @@ export default function CharacterCreation({
 
   return (
     <div className={`min-h-screen bg-background text-foreground p-4 ${className}`}>
-      {/* Progress indicator */}
-      <div className="max-w-2xl mx-auto mb-8">
-        <div className="flex items-center justify-center space-x-2 mb-4">
-          {["basics", "portrait", "questionnaire", "abilities"].map((step, index) => (
-            <div key={step} className="flex items-center">
-              <div className={`
-                w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
-                ${currentStep === step ? 'bg-primary text-primary-foreground' : 
-                  ["basics", "portrait", "questionnaire", "abilities"].indexOf(currentStep) > index 
-                    ? 'bg-primary/20 text-primary' 
-                    : 'bg-muted text-muted-foreground'}
-              `}>
-                {index + 1}
+      {/* Progress indicator - only show for non-template steps */}
+      {currentStep !== "templates" && (
+        <div className="max-w-2xl mx-auto mb-8">
+          <div className="flex items-center justify-center space-x-2 mb-4">
+            {["basics", "portrait", "questionnaire", "abilities"].map((step, index) => (
+              <div key={step} className="flex items-center">
+                <div className={`
+                  w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
+                  ${currentStep === step ? 'bg-primary text-primary-foreground' : 
+                    ["basics", "portrait", "questionnaire", "abilities"].indexOf(currentStep) > index 
+                      ? 'bg-primary/20 text-primary' 
+                      : 'bg-muted text-muted-foreground'}
+                `}>
+                  {index + 1}
+                </div>
+                {index < 3 && (
+                  <div className={`w-8 h-0.5 mx-2 ${
+                    ["basics", "portrait", "questionnaire", "abilities"].indexOf(currentStep) > index 
+                      ? 'bg-primary' 
+                      : 'bg-muted'
+                  }`} />
+                )}
               </div>
-              {index < 3 && (
-                <div className={`w-8 h-0.5 mx-2 ${
-                  ["basics", "portrait", "questionnaire", "abilities"].indexOf(currentStep) > index 
-                    ? 'bg-primary' 
-                    : 'bg-muted'
-                }`} />
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
+          <div className="text-center">
+            <Badge variant="secondary" className="text-xs">
+              Step {["basics", "portrait", "questionnaire", "abilities"].indexOf(currentStep) + 1} of 4
+            </Badge>
+          </div>
         </div>
-        <div className="text-center">
-          <Badge variant="secondary" className="text-xs">
-            Step {["basics", "portrait", "questionnaire", "abilities"].indexOf(currentStep) + 1} of 4
-          </Badge>
-        </div>
-      </div>
+      )}
 
       {renderCurrentStep()}
     </div>
