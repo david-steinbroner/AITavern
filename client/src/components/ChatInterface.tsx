@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Mic, MicOff, Send, Swords, Eye, MessageSquare, Loader2, User, UserCheck, HelpCircle, RotateCcw, Clock, BookOpen, AlertTriangle } from "lucide-react";
 import HighlightedMessage from "./HighlightedMessage";
+import DMMessage from "./DMMessage";
 import type { Message, Character } from "@shared/schema";
 import { useState, useRef, useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -86,6 +87,20 @@ export default function ChatInterface({
     onToggleListening?.();
     console.log('Speech recognition toggled:', !isListening);
   };
+
+  const handleDiceRoll = (rollType: string, ability: string) => {
+    // Generate dice roll result (d20 + ability modifier)
+    const roll = Math.floor(Math.random() * 20) + 1;
+    const abilityScore = character?.[ability as keyof Character] as number || 10;
+    const modifier = Math.floor((abilityScore - 10) / 2);
+    const total = roll + modifier;
+    
+    const rollMessage = `🎲 **${ability.charAt(0).toUpperCase() + ability.slice(1)} Check:** Rolled ${roll} + ${modifier} = **${total}**`;
+    
+    // Send the roll result as a message
+    onSendMessage?.(rollMessage, false);
+    console.log('Dice roll:', { rollType, ability, roll, modifier, total });
+  };
   
   const getSenderBadge = (sender: string, senderName?: string | null) => {
     switch (sender) {
@@ -166,16 +181,21 @@ export default function ChatInterface({
                         ? "bg-primary/10 border-l-4 border-primary ml-4" 
                         : "bg-muted/50"
                     }`}>
-                      <HighlightedMessage 
-                        content={message.content} 
-                        character={character}
-                        messages={messages}
-                        className={
-                          message.sender === "dm" 
-                            ? "text-base leading-relaxed text-foreground font-medium" 
-                            : "text-sm text-foreground"
-                        }
-                      />
+                      {message.sender === "dm" ? (
+                        <DMMessage 
+                          content={message.content} 
+                          character={character}
+                          messages={messages}
+                          onDiceRoll={handleDiceRoll}
+                        />
+                      ) : (
+                        <HighlightedMessage 
+                          content={message.content} 
+                          character={character}
+                          messages={messages}
+                          className="text-sm text-foreground"
+                        />
+                      )}
                     </div>
                   </div>
                 ))

@@ -278,11 +278,23 @@ Please respond as the DM out-of-character. This is a meta-game conversation abou
 
 PLAYER ACTION: ${cleanMessage}
 
-Please respond as the DM or appropriate NPC. Provide an engaging response that:
-1. Acknowledges the player's action
-2. Describes what happens as a result
-3. Advances the story appropriately
-4. Maintains immersion and atmosphere`;
+Please respond as the DM or appropriate NPC. Structure your response for optimal readability:
+
+NARRATIVE SECTION (Main story response):
+- Acknowledge the player's action
+- Describe what happens as a result  
+- Advance the story with vivid, engaging details
+- Keep this section conversational and immersive
+
+ACTION OPTIONS (If providing choices):
+- List any player options as clear bullet points starting with "•"
+- Each option should be concise and action-focused
+- Place these AFTER the main narrative
+
+DICE ROLLING:
+- When player actions require dice rolls, indicate this clearly but keep it simple
+- Example: "Roll Strength to break down the door" or "Make a Dexterity save"
+- Avoid overwhelming stat blocks or complex number combinations`;
 
       const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
         {
