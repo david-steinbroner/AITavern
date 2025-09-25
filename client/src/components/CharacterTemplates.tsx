@@ -260,7 +260,7 @@ export default function CharacterTemplates({
       case "guardian":
         return "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800";
       case "scholar":
-        return "bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800";
+        return "bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800";
       case "healer":
         return "bg-emerald-50 dark:bg-emerald-950 border-emerald-200 dark:border-emerald-800";
       case "wanderer":
@@ -268,7 +268,7 @@ export default function CharacterTemplates({
       case "mystic":
         return "bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800";
       case "protector":
-        return "bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800";
+        return "bg-stone-50 dark:bg-stone-950 border-stone-200 dark:border-stone-800";
       default:
         return "bg-muted";
     }
