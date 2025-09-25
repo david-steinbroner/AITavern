@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { TooltipProvider as CustomTooltipProvider } from "@/components/TooltipProvider";
 import SettingsDropdown from "@/components/SettingsDropdown";
+import AccountMenu from "@/components/AccountMenu";
 import { ArrowLeft } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -449,7 +450,10 @@ function GameApp() {
               campaignId={campaign?.id}
             />
           </div>
-          <SettingsDropdown />
+          <div className="flex items-center gap-2">
+            <AccountMenu />
+            <SettingsDropdown />
+          </div>
         </div>
       </div>
       

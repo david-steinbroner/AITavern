@@ -2,6 +2,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HelpCircle, Settings, Sparkles, UserPlus, Map } from "lucide-react";
 import MultipleAdventures from "./MultipleAdventures";
+import AccountMenu from "./AccountMenu";
+import DemoIndicator from "./DemoIndicator";
 
 interface StartMenuProps {
   onStartGame: (campaignId: string) => void;
@@ -19,7 +21,20 @@ export default function StartMenu({
   onShowSettings 
 }: StartMenuProps) {
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-background">
+      {/* Demo Mode Indicator */}
+      <DemoIndicator />
+      
+      {/* Header */}
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border">
+        <div className="flex items-center justify-between h-16 px-4">
+          <div></div> {/* Spacer */}
+          <h1 className="font-serif text-xl text-primary">Skunk Tales</h1>
+          <AccountMenu />
+        </div>
+      </div>
+      
+      <div className="flex flex-col items-center justify-center p-6 min-h-[calc(100vh-4rem)]">
       {/* Hero Section */}
       <div className="text-center mb-8">
         <div className="mb-4 relative">
@@ -102,6 +117,7 @@ export default function StartMenu({
             </Button>
           </Card>
         )}
+      </div>
       </div>
 
     </div>
