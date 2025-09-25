@@ -96,21 +96,15 @@ export default function LandingPage({ onLogin }: LandingPageProps) {
               <Gamepad2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-amber-700 to-green-700 bg-clip-text text-transparent">
-              Skunk Tales
+              Skunk Tales.
             </h1>
           </div>
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2 leading-tight">
-            Be the hero of your own story
+            Be the hero of any story.
           </h2>
-          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto mb-2 leading-relaxed">
-            Create adventures in any genre, powered by AI. Your choices shape the story.
+          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto mb-4 leading-relaxed">
+            Talk • Tap • Type
           </p>
-          <div className="flex flex-wrap justify-center gap-2 text-sm">
-            <Badge variant="secondary" className="text-xs">Any Genre</Badge>
-            <Badge variant="secondary" className="text-xs">AI-Powered</Badge>
-            <Badge variant="secondary" className="text-xs">Multiplayer Ready</Badge>
-            <Badge variant="secondary" className="text-xs">Mobile-First</Badge>
-          </div>
         </div>
 
         {/* Example Adventure Preview - Compact version */}

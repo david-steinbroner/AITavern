@@ -34,21 +34,21 @@ export default function StartMenu({
         </div>
       </div>
       
-      <div className="flex flex-col items-center justify-center p-6 min-h-[calc(100vh-4rem)]">
+      <div className="flex flex-col items-center justify-start p-4 min-h-[calc(100vh-4rem)]">
       {/* Hero Section */}
-      <div className="text-center mb-8">
-        <div className="mb-4 relative">
+      <div className="text-center mb-6">
+        <div className="mb-3 relative">
           {/* Friendly Skunk Placeholder */}
-          <div className="w-20 h-20 mx-auto bg-gradient-to-br from-gray-800 to-gray-600 rounded-full flex items-center justify-center mb-2 shadow-lg">
-            <div className="text-white text-2xl">🦨</div>
+          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-gray-800 to-gray-600 rounded-full flex items-center justify-center mb-2 shadow-lg">
+            <div className="text-white text-xl">🦨</div>
           </div>
-          <Sparkles className="w-6 h-6 absolute top-0 right-1/2 transform translate-x-8 text-accent animate-pulse" />
+          <Sparkles className="w-5 h-5 absolute top-0 right-1/2 transform translate-x-6 text-accent animate-pulse" />
         </div>
-        <h1 className="font-serif text-4xl text-primary mb-2" data-testid="game-title">
-          Skunk Tales
+        <h1 className="font-serif text-2xl text-primary mb-1" data-testid="game-title">
+          Skunk Tales.
         </h1>
-        <p className="text-muted-foreground text-lg max-w-sm mx-auto leading-relaxed">
-          Cozy AI adventures await. Start your magical journey today.
+        <p className="text-muted-foreground text-base max-w-sm mx-auto leading-relaxed">
+          Be the hero of any story.
         </p>
       </div>
 
