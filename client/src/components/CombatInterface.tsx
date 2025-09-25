@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Swords, Shield, Zap, Heart, ArrowLeft, ArrowRight, ArrowUp } from "lucide-react";
+import { Swords, Shield, Zap, Heart, ArrowLeft, ArrowRight, ArrowUp, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface Enemy {
@@ -241,14 +241,25 @@ export default function CombatInterface({
                   </div>
                 )}
                 
-                <Button 
-                  variant="outline" 
-                  onClick={handleFlee}
-                  className="w-full"
-                  data-testid="button-flee"
-                >
-                  Flee Combat
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleFlee}
+                    className="flex-1"
+                    data-testid="button-flee"
+                  >
+                    Flee Combat
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => window.location.reload()}
+                    className="px-3"
+                    data-testid="button-refresh"
+                    title="Refresh if combat is stuck"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

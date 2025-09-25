@@ -46,6 +46,17 @@ export default function NavigationTabs({
 
   const tabs = [
     {
+      id: "chat" as TabType,
+      label: "Chat",
+      icon: <MessageSquare className="w-5 h-5" />,
+      badge: unreadMessages > 0 ? unreadMessages : null,
+      tooltip: {
+        id: 'nav-chat',
+        title: 'Adventure Chat',
+        content: 'Talk with your AI companion! Describe what you want to do and your guide will continue your story.'
+      }
+    },
+    {
       id: "character" as TabType,
       label: "Character",
       icon: <User className="w-5 h-5" />,
@@ -77,21 +88,16 @@ export default function NavigationTabs({
         title: 'Inventory',
         content: 'Manage your weapons, armor, and items. Equip better gear to improve your combat abilities!'
       }
-    },
-    {
-      id: "chat" as TabType,
-      label: "Chat",
-      icon: <MessageSquare className="w-5 h-5" />,
-      badge: unreadMessages > 0 ? unreadMessages : null,
-      tooltip: {
-        id: 'nav-chat',
-        title: 'Adventure Chat',
-        content: 'Talk with your AI companion! Describe what you want to do and your guide will continue your story.'
-      }
     }
   ];
   
   const handleTabClick = (tabId: TabType) => {
+    // Scroll to top of page when changing tabs
+    const pageTop = document.getElementById('page-top');
+    if (pageTop) {
+      pageTop.scrollIntoView({ behavior: 'smooth' });
+    }
+    
     // Mark tab as visited to clear notifications
     markTabAsVisited(tabId);
     

@@ -113,23 +113,28 @@ export default function ChatInterface({
                   <User className="w-4 h-4" />
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="text-muted-foreground cursor-help">Roleplay</span>
+                      <div className="touch-manipulation cursor-help min-h-[44px] flex items-center" role="button" tabIndex={0}>
+                        <span className="text-muted-foreground">Roleplay</span>
+                      </div>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Talk as your character. Your words shape the story.</p>
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p>Talk and act as your character. Your words and actions directly shape the adventure story.</p>
                     </TooltipContent>
                   </Tooltip>
                   <Switch
                     checked={isDirectDM}
                     onCheckedChange={setIsDirectDM}
                     data-testid="switch-chat-mode"
+                    className="touch-manipulation"
                   />
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="text-muted-foreground cursor-help">DM Help</span>
+                      <div className="touch-manipulation cursor-help min-h-[44px] flex items-center" role="button" tabIndex={0}>
+                        <span className="text-muted-foreground">DM Help</span>
+                      </div>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Message the AI DM for clarifications, recaps, or fixes.</p>
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p>Message the AI Dungeon Master directly for out-of-character help, story clarifications, rule questions, or to request changes to the adventure.</p>
                     </TooltipContent>
                   </Tooltip>
                   <HelpCircle className="w-4 h-4" />
@@ -147,8 +152,8 @@ export default function ChatInterface({
                 <div className="text-center py-8 text-muted-foreground">
                   <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
                   <p>Welcome to your adventure!</p>
-                  <p className="text-sm">Your character and world are ready. Start by speaking to your AI companion or using quick actions below!</p>
-                  <p className="text-xs mt-2 opacity-75">Tip: Try switching to DM Help and tap "Recap my last session" to get oriented, or visit other tabs to customize your character.</p>
+                  <p className="text-sm">Your character and world are ready. Start by describing what you want to do or use the quick action buttons below!</p>
+                  <p className="text-xs mt-2 opacity-75">You find yourself at the edge of an ancient forest. The trees whisper secrets in a language older than memory, and strange lights dance between the branches. What would you like to do first?</p>
                 </div>
               ) : (
                 messages.map((message) => (

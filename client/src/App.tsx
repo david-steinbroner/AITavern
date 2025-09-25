@@ -41,7 +41,7 @@ type ViewType = "welcome" | "startMenu" | "userGuide" | "characterCreation" | "a
 
 function GameApp() {
   const [currentView, setCurrentView] = useState<ViewType>("welcome");
-  const [activeTab, setActiveTab] = useState<TabType>("character");
+  const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [isListening, setIsListening] = useState(false);
   
   // Demo and tooltip functionality
@@ -339,7 +339,7 @@ function GameApp() {
         onStartDemo={() => {
           startDemo();
           setCurrentView("game");
-          setActiveTab("character");
+          setActiveTab("chat");
         }}
         onSkipDemo={() => {
           skipDemo();
@@ -475,19 +475,20 @@ function GameApp() {
             variant="ghost"
             size="sm"
             onClick={() => setCurrentView("startMenu")}
-            className="text-muted-foreground"
+            className="text-muted-foreground shrink-0"
             data-testid="button-return-menu"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
-            Main Menu
+            <span className="hidden sm:inline">Main Menu</span>
+            <span className="sm:hidden">Menu</span>
           </Button>
-          <div className="group">
+          <div className="group flex-1 flex justify-center min-w-0">
             <EditableCampaignName
               campaignName={campaign?.name || "Skunk Tales Adventure"}
               campaignId={campaign?.id}
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <AccountMenu />
             <SettingsDropdown />
           </div>
@@ -496,7 +497,8 @@ function GameApp() {
       
       {/* Main Content */}
       <main className="px-3 sm:px-4 py-4 sm:py-6 pb-20 sm:pb-24 min-h-0">
-        <div className="max-h-[calc(100vh-12rem)] overflow-y-auto">
+        <div className="max-h-[calc(100vh-12rem)] overflow-y-auto" onScroll={() => {}}>
+          <div id="page-top" />
           {getPageContent()}
         </div>
       </main>

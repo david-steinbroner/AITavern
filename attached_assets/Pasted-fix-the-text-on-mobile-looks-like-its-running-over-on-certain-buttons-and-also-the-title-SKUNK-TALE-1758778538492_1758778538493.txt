@@ -1,0 +1,23 @@
+fix the text on mobile. looks like its running over on certain buttons and also the title SKUNK TALES ADVENTURE adventure title isn't centered or spaced corectly. should be able to size accordingly if the adventure title is long, should always ben centered and resize if it gets long. 
+
+And, confirm that all CTA buttons to get started should be tappable from every page wihtout needing to scroll. Specifically during choose your character.
+
+And tool tips, when tapped, aren't displaying any tips. Create accessible content for each of them, including the one next to the DM HELP toggle. 
+
+also, generate portrait with AI isn't generating any images... is that because the proejct is not published?
+
+Also, every time I try to talk to the DM, it isn't able ot reply... confirm that the DM can actually do AI stuff and make sure the quick buttons on the chat like attack and investigate and talk actually do stuff. is the DM unable to answer with actual sstuff beacuse this isn't published yet?
+
+And, i think "chat" should actually be far left in the nav bar when in an adventure so people land on that page when they start an adventure. 
+
+and make sure that there is a starting prompt when starting a new adventure, otherwise players don't have anything to treact to. should be at least 1 or 2 descriptive paragraphs of where they are and what is around them and if any NPCs are there. 
+
+And confirm that signin works - only able to do demo mode right now. not able to go through signin when demo mode is off and make that demo mode toggle more clear.
+
+Also when in combat, it freezes (is this because the project isn't published?), but there isn't a back button to fix when it is frozen? might need a refresh or something button that appears or is persisstant in case things freeze. 
+
+And when visiting new pages, users should land at the top of the pages. right now i'm landing scrolled down in the middle of a few.
+
+AMd "view backstory" isn't showing me anyhting when I click it. 
+
+and on the landing page, remove the copy "tap talk type" from the subtitle and make them into tags, and replace hte tags "Any story, AI GM, Solo or Group, and Phone-first". 

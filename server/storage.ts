@@ -56,7 +56,9 @@ export interface IStorage {
   
   // Message history for AI conversations
   getMessages(): Promise<Message[]>;
+  getMessagesByCampaign(campaignId: string): Promise<Message[]>;
   getRecentMessages(limit: number): Promise<Message[]>;
+  getRecentMessagesByCampaign(campaignId: string, limit: number): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
   clearMessages(): Promise<void>;
   
@@ -522,8 +524,17 @@ export class MemStorage implements IStorage {
     return [...this.messages];
   }
 
+  async getMessagesByCampaign(campaignId: string): Promise<Message[]> {
+    return this.messages.filter(message => message.campaignId === campaignId);
+  }
+
   async getRecentMessages(limit: number): Promise<Message[]> {
     return this.messages.slice(-limit);
+  }
+
+  async getRecentMessagesByCampaign(campaignId: string, limit: number): Promise<Message[]> {
+    const campaignMessages = this.messages.filter(message => message.campaignId === campaignId);
+    return campaignMessages.slice(-limit);
   }
 
   async createMessage(message: InsertMessage): Promise<Message> {

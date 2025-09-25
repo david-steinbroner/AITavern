@@ -77,11 +77,11 @@ export default function CharacterSheet({ character, className = "" }: CharacterS
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Backstory Display */}
-          {showBackstory && character.backstory && (
+          {showBackstory && (
             <div className="bg-muted/20 p-4 rounded-lg border-l-4 border-primary/30">
               <h4 className="font-medium text-sm mb-2 text-primary">Character Backstory</h4>
               <p className="text-sm text-muted-foreground leading-relaxed" data-testid="character-backstory">
-                {character.backstory}
+                {character.backstory || "No backstory has been written for this character yet. You can add one during character creation or by editing your character."}
               </p>
             </div>
           )}

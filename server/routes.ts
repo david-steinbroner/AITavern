@@ -1004,6 +1004,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Message routes for AI conversation
   app.get("/api/messages", isAuthenticated, async (req, res) => {
     try {
+      // Get the active campaign for this user
+      const activeCampaign = await storage.getActiveCampaign();
+      if (!activeCampaign) {
+        return res.json([]); // Return empty array if no active campaign
+      }
+
       let limit: number | undefined;
       if (req.query.limit) {
         const parsed = parseInt(req.query.limit as string);
@@ -1014,8 +1020,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const messages = limit
-        ? await storage.getRecentMessages(limit)
-        : await storage.getMessages();
+        ? await storage.getRecentMessagesByCampaign(activeCampaign.id, limit)
+        : await storage.getMessagesByCampaign(activeCampaign.id);
       res.json(messages);
     } catch (error) {
       console.error("Error fetching messages:", error);

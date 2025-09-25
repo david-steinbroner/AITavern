@@ -88,51 +88,51 @@ export default function LandingPage({ onLogin }: LandingPageProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-green-50 dark:from-amber-950 dark:to-green-950">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-3 sm:py-4">
         {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-green-600 rounded-lg flex items-center justify-center">
-              <Gamepad2 className="w-6 h-6 text-white" />
+        <div className="text-center mb-4 sm:mb-5">
+          <div className="inline-flex items-center gap-2 mb-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-amber-600 to-green-600 rounded-lg flex items-center justify-center">
+              <Gamepad2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-700 to-green-700 bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-amber-700 to-green-700 bg-clip-text text-transparent">
               Skunk Tales
             </h1>
           </div>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-4 leading-tight">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2 leading-tight">
             Be the hero of your own story
           </h2>
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-4 leading-relaxed">
-            Make a world. Step inside. Any genre, any system. Tap • Talk • Type.
+          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto mb-2 leading-relaxed">
+            Create adventures in any genre, powered by AI. Your choices shape the story.
           </p>
           <div className="flex flex-wrap justify-center gap-2 text-sm">
-            <Badge variant="secondary" className="text-xs">Any Story</Badge>
-            <Badge variant="secondary" className="text-xs">AI GM</Badge>
-            <Badge variant="secondary" className="text-xs">Solo or Group</Badge>
-            <Badge variant="secondary" className="text-xs">Phone-first</Badge>
+            <Badge variant="secondary" className="text-xs">Any Genre</Badge>
+            <Badge variant="secondary" className="text-xs">AI-Powered</Badge>
+            <Badge variant="secondary" className="text-xs">Multiplayer Ready</Badge>
+            <Badge variant="secondary" className="text-xs">Mobile-First</Badge>
           </div>
         </div>
 
-        {/* Example Adventure Preview */}
-        <div className="text-center mb-12">
+        {/* Example Adventure Preview - Compact version */}
+        <div className="text-center mb-4 sm:mb-5 hidden sm:block">
           <div className="max-w-2xl mx-auto">
-            <div className="bg-gradient-to-r from-amber-100 to-green-100 dark:from-amber-900/30 dark:to-green-900/30 rounded-lg p-6 sm:p-8 border border-amber-200 dark:border-amber-800">
-              <div className="text-left space-y-4">
-                <p className="text-sm text-muted-foreground">Example Adventure in Progress:</p>
-                <blockquote className="text-base sm:text-lg italic leading-relaxed">
+            <div className="bg-gradient-to-r from-amber-100 to-green-100 dark:from-amber-900/30 dark:to-green-900/30 rounded-lg p-3 sm:p-4 border border-amber-200 dark:border-amber-800">
+              <div className="text-left space-y-2">
+                <p className="text-xs text-muted-foreground">Example Adventure in Progress:</p>
+                <blockquote className="text-sm italic leading-relaxed">
                   "At dusk, a doorway appears where the wall should be. What do you do?"
                 </blockquote>
-                <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2 sm:flex-wrap">
-                  <Button variant="outline" size="sm" className="text-xs h-auto py-2 px-3 min-h-[2.5rem]">
+                <div className="grid grid-cols-2 gap-1.5 sm:flex sm:gap-2 sm:flex-wrap">
+                  <Button variant="outline" size="sm" className="text-xs h-auto py-1 px-2 min-h-[1.75rem]">
                     Open it
                   </Button>
-                  <Button variant="outline" size="sm" className="text-xs h-auto py-2 px-3 min-h-[2.5rem]">
+                  <Button variant="outline" size="sm" className="text-xs h-auto py-1 px-2 min-h-[1.75rem]">
                     Examine first
                   </Button>
-                  <Button variant="outline" size="sm" className="text-xs h-auto py-2 px-3 min-h-[2.5rem]">
+                  <Button variant="outline" size="sm" className="text-xs h-auto py-1 px-2 min-h-[1.75rem]">
                     Ask a companion
                   </Button>
-                  <Button variant="outline" size="sm" className="text-xs h-auto py-2 px-3 min-h-[2.5rem]">
+                  <Button variant="outline" size="sm" className="text-xs h-auto py-1 px-2 min-h-[1.75rem]">
                     Try something else
                   </Button>
                 </div>
@@ -144,9 +144,9 @@ export default function LandingPage({ onLogin }: LandingPageProps) {
         {/* CTA Section */}
         <div className="text-center">
           <Card className="max-w-lg mx-auto">
-            <CardHeader>
-              <CardTitle className="text-2xl">Start an Adventure</CardTitle>
-              <CardDescription className="text-base">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl sm:text-2xl">Start an Adventure</CardTitle>
+              <CardDescription className="text-sm sm:text-base">
                 Jump into your first adventure or customize your experience
               </CardDescription>
             </CardHeader>
