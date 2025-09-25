@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Gamepad2, MapPin, Users, Zap } from "lucide-react";
+import { Gamepad2 } from "lucide-react";
 
 interface LandingPageProps {
   onLogin: () => void;
@@ -27,93 +27,47 @@ export default function LandingPage({ onLogin }: LandingPageProps) {
           </p>
         </div>
 
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          <Card className="hover-elevate">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-green-600" />
-                <CardTitle className="text-lg">AI Adventure Guide</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>
-                Your intelligent companion creates dynamic stories, manages quests, and guides you through magical worlds tailored to your choices.
-              </CardDescription>
-            </CardContent>
-          </Card>
-
-          <Card className="hover-elevate">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-amber-600" />
-                <CardTitle className="text-lg">Character Creation</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>
-                Build unique characters with templates and randomization. Choose from various classes, customize appearance, and craft compelling backstories.
-              </CardDescription>
-            </CardContent>
-          </Card>
-
-          <Card className="hover-elevate">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-green-600" />
-                <CardTitle className="text-lg">Mobile-First Gaming</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>
-                Optimized for mobile with intuitive touch controls, bottom navigation, and cozy design that makes tabletop gaming accessible anywhere.
-              </CardDescription>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Features List */}
+        {/* Example Adventure Preview */}
         <div className="text-center mb-12">
-          <h2 className="text-2xl font-semibold mb-6">Everything You Need for Epic Adventures</h2>
-          <div className="flex flex-wrap justify-center gap-2">
-            {[
-              "Real-time AI Responses",
-              "Character Progression",
-              "Quest Management", 
-              "Inventory System",
-              "Combat Mechanics",
-              "Multiple Campaigns",
-              "Touch-Optimized UI",
-              "Offline Support"
-            ].map((feature) => (
-              <Badge key={feature} variant="secondary" className="text-sm">
-                {feature}
-              </Badge>
-            ))}
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-gradient-to-r from-amber-100 to-green-100 dark:from-amber-900/30 dark:to-green-900/30 rounded-lg p-8 border border-amber-200 dark:border-amber-800">
+              <div className="text-left space-y-4">
+                <p className="text-sm text-muted-foreground">Example Adventure in Progress:</p>
+                <blockquote className="text-base italic">
+                  "The ancient forest whispers secrets as your character, Thara the Druid, discovers a glowing crystal hidden beneath the roots of an enormous oak tree. What do you do next?"
+                </blockquote>
+                <div className="flex gap-2 flex-wrap">
+                  <Badge variant="outline" className="text-xs">🏃 Investigate the crystal</Badge>
+                  <Badge variant="outline" className="text-xs">🛡️ Proceed with caution</Badge>
+                  <Badge variant="outline" className="text-xs">💭 Ask your companion for advice</Badge>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* CTA Section */}
         <div className="text-center">
-          <Card className="max-w-md mx-auto">
+          <Card className="max-w-lg mx-auto">
             <CardHeader>
-              <CardTitle>Ready to Begin Your Adventure?</CardTitle>
-              <CardDescription>
-                Sign in to create your first character and start exploring magical worlds
+              <CardTitle className="text-2xl">Ready to Begin Your Adventure?</CardTitle>
+              <CardDescription className="text-base">
+                Join thousands of adventurers in magical worlds powered by AI
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <Button 
                 onClick={onLogin}
                 size="lg"
                 className="w-full bg-gradient-to-r from-amber-600 to-green-600 hover:from-amber-700 hover:to-green-700"
-                data-testid="button-login"
+                data-testid="button-start-adventure"
               >
-                Start Playing
+                Ready to Begin Your Adventure
               </Button>
-              <p className="text-xs text-muted-foreground mt-4">
-                Sign in with Google, GitHub, or email to get started
-              </p>
+              <div className="text-sm text-muted-foreground">
+                <p>New to Skunk Tales? Create your account and first character.</p>
+                <p>Returning adventurer? Sign in to continue your journey.</p>
+              </div>
             </CardContent>
           </Card>
         </div>
