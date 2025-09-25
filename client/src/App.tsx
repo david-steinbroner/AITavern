@@ -9,6 +9,14 @@ import SettingsDropdown from "@/components/SettingsDropdown";
 import AccountMenu from "@/components/AccountMenu";
 import { ArrowLeft } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
+
+// Web Speech API types for TypeScript
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
 import { useAuth } from "@/hooks/useAuth";
 
 // Components
@@ -43,6 +51,7 @@ function GameApp() {
   const [currentView, setCurrentView] = useState<ViewType>("welcome");
   const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [isListening, setIsListening] = useState(false);
+  const [recognition, setRecognition] = useState<any>(null);
   
   // Helper function to scroll to top on any view change
   const scrollToTop = () => {
@@ -199,14 +208,90 @@ function GameApp() {
   };
   
   const handleToggleListening = () => {
-    setIsListening(!isListening);
-    // Simulate speech recognition for demo
     if (!isListening) {
+      // Start speech recognition
+      startSpeechRecognition();
+    } else {
+      // Stop speech recognition
+      stopSpeechRecognition();
+    }
+  };
+
+  // Speech recognition implementation
+  const startSpeechRecognition = async () => {
+    // Check if Web Speech API is supported
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      console.error('Speech recognition not supported in this browser');
+      // Fallback to simulated behavior for unsupported browsers
+      setIsListening(true);
       setTimeout(() => {
         setIsListening(false);
         handleSendMessage("I search for hidden passages behind the tapestries.");
-      }, 3000);
+      }, 2000);
+      return;
     }
+
+    try {
+      // Request microphone permission
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // Create speech recognition instance
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const newRecognition = new SpeechRecognition();
+      
+      newRecognition.continuous = false;
+      newRecognition.interimResults = false;
+      newRecognition.lang = 'en-US';
+      
+      newRecognition.onstart = () => {
+        setIsListening(true);
+        console.log('Speech recognition started');
+      };
+      
+      newRecognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        console.log('Speech recognized:', transcript);
+        
+        // Send the recognized speech as a message
+        if (transcript.trim()) {
+          handleSendMessage(transcript);
+        }
+        
+        setIsListening(false);
+      };
+      
+      newRecognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+        
+        // Handle common errors gracefully
+        if (event.error === 'not-allowed') {
+          console.log('Microphone permission denied');
+        } else if (event.error === 'no-speech') {
+          console.log('No speech detected');
+        }
+      };
+      
+      newRecognition.onend = () => {
+        console.log('Speech recognition ended');
+        setIsListening(false);
+      };
+      
+      setRecognition(newRecognition);
+      newRecognition.start();
+      
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      setIsListening(false);
+    }
+  };
+
+  const stopSpeechRecognition = () => {
+    if (recognition) {
+      recognition.stop();
+      setRecognition(null);
+    }
+    setIsListening(false);
   };
   
   // Stable enemy action callback to prevent useEffect reset in CombatInterface
