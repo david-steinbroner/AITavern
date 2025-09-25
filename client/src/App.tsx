@@ -44,6 +44,25 @@ function GameApp() {
   const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [isListening, setIsListening] = useState(false);
   
+  // Helper function to scroll to top on any view change
+  const scrollToTop = () => {
+    const pageTop = document.getElementById('page-top');
+    if (pageTop) {
+      pageTop.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+    
+    const scrollContainer = document.querySelector('[data-scroll-container="main"]') || 
+                          document.querySelector('main .overflow-y-auto');
+    if (scrollContainer) {
+      scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    
+    // Fallback to window scroll if no specific container found
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  
   // Demo and tooltip functionality
   const {
     isDemoActive,
@@ -67,6 +86,7 @@ function GameApp() {
     // If user has completed demo or has seen tooltips, skip welcome
     if (!isNewUser && currentView === "welcome") {
       setCurrentView("startMenu");
+      scrollToTop();
     }
   }, [demoCompleted, seenTooltips.size, currentView]);
   
@@ -339,13 +359,18 @@ function GameApp() {
         onStartDemo={() => {
           startDemo();
           setCurrentView("game");
+          scrollToTop();
           setActiveTab("chat");
         }}
         onSkipDemo={() => {
           skipDemo();
           setCurrentView("startMenu");
+          scrollToTop();
         }}
-        onEnterGame={() => setCurrentView("startMenu")}
+        onEnterGame={() => {
+          setCurrentView("startMenu");
+          scrollToTop();
+        }}
       />
     );
   }
@@ -360,20 +385,33 @@ function GameApp() {
             // Invalidate campaigns query to refresh active campaign
             queryClient.invalidateQueries({ queryKey: ['/api/campaigns/active'] });
             setCurrentView("game");
+          scrollToTop();
           } catch (error) {
             console.error('Failed to activate campaign:', error);
           }
         }}
-        onShowGuide={() => setCurrentView("userGuide")}
-        onCreateCharacter={() => setCurrentView("characterCreation")}
-        onShowAdventureTemplates={() => setCurrentView("adventureTemplates")}
+        onShowGuide={() => {
+          setCurrentView("userGuide");
+          scrollToTop();
+        }}
+        onCreateCharacter={() => {
+          setCurrentView("characterCreation");
+          scrollToTop();
+        }}
+        onShowAdventureTemplates={() => {
+          setCurrentView("adventureTemplates");
+          scrollToTop();
+        }}
       />
     );
   }
 
   if (currentView === "userGuide") {
     return (
-      <UserGuide onBack={() => setCurrentView("startMenu")} />
+      <UserGuide onBack={() => {
+        setCurrentView("startMenu");
+        scrollToTop();
+      }} />
     );
   }
 
@@ -383,8 +421,12 @@ function GameApp() {
         onComplete={(characterData) => {
           console.log('Character created:', characterData);
           setCurrentView("game");
+          scrollToTop();
         }}
-        onBack={() => setCurrentView("startMenu")}
+        onBack={() => {
+          setCurrentView("startMenu");
+          scrollToTop();
+        }}
       />
     );
   }
@@ -411,10 +453,12 @@ function GameApp() {
             queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
             
             setCurrentView("game");
+          scrollToTop();
           } catch (error) {
             console.error('Failed to initialize adventure:', error);
             // Still proceed to game view
             setCurrentView("game");
+          scrollToTop();
           }
         }}
         onSkip={async () => {
@@ -448,13 +492,18 @@ function GameApp() {
             queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
             
             setCurrentView("game");
+          scrollToTop();
           } catch (error) {
             console.error('Failed to initialize default adventure:', error);
             // Still proceed to game view
             setCurrentView("game");
+          scrollToTop();
           }
         }}
-        onBack={() => setCurrentView("startMenu")}
+        onBack={() => {
+          setCurrentView("startMenu");
+          scrollToTop();
+        }}
       />
     );
   }
@@ -474,7 +523,10 @@ function GameApp() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setCurrentView("startMenu")}
+            onClick={() => {
+              setCurrentView("startMenu");
+              scrollToTop();
+            }}
             className="text-muted-foreground shrink-0"
             data-testid="button-return-menu"
           >
@@ -496,7 +548,7 @@ function GameApp() {
       </div>
       
       {/* Main Content */}
-      <main className="px-3 sm:px-4 py-4 sm:py-6 pb-20 sm:pb-24 min-h-0">
+      <main className="px-3 sm:px-4 py-4 sm:py-6 pb-20 sm:pb-24 min-h-0" data-scroll-container="main">
         <div id="page-top" />
         <div className="max-h-[calc(100vh-12rem)] overflow-y-auto" onScroll={() => {}}>
           {getPageContent()}

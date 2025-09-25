@@ -149,11 +149,10 @@ export default function ChatInterface({
           <ScrollArea className="flex-1" ref={scrollRef}>
             <div className="space-y-3 pr-4">
               {messages.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>Welcome to your adventure!</p>
-                  <p className="text-sm">Your character and world are ready. Start by describing what you want to do or use the quick action buttons below!</p>
-                  <p className="text-xs mt-2 opacity-75">You find yourself at the edge of an ancient forest. The trees whisper secrets in a language older than memory, and strange lights dance between the branches. What would you like to do first?</p>
+                <div className="text-center py-6 text-muted-foreground">
+                  <MessageSquare className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                  <p className="font-medium">Adventure awaits!</p>
+                  <p className="text-sm mt-1">What do you want to do first?</p>
                 </div>
               ) : (
                 messages.map((message) => (
@@ -188,11 +187,42 @@ export default function ChatInterface({
             </div>
           </ScrollArea>
           
-          {/* Quick Actions / DM Presets */}
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-foreground">
-              {isDirectDM ? "DM Help" : "Quick Actions"}
+          {/* User Input - More Prominent */}
+          <div className="space-y-3 border-t pt-3 mt-4">
+            <div className="flex items-center gap-2">
+              <Button
+                size="icon"
+                variant={isListening ? "destructive" : "secondary"}
+                onClick={handleToggleListening}
+                className="shrink-0"
+                data-testid="button-voice-toggle"
+              >
+                {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              </Button>
+              
+              <div className="flex-1 flex gap-2">
+                <input
+                  type="text"
+                  placeholder={isListening ? "Listening..." : isDirectDM ? "Ask the DM..." : "Say or do something..."}
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleSend()}
+                  className="flex-1 px-3 py-2 bg-muted rounded-md text-sm text-foreground placeholder:text-muted-foreground border-none focus:outline-none focus:ring-2 focus:ring-primary"
+                  disabled={isListening || isLoading}
+                  data-testid="input-chat-message"
+                />
+                <Button 
+                  size="icon" 
+                  onClick={handleSend} 
+                  disabled={!inputText.trim() || isListening || isLoading}
+                  data-testid="button-send-message"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
+            
+            {/* Quick Actions - Compact */}
             <div className="flex gap-2 flex-wrap">
               {isDirectDM ? (
                 dmPresets.map((preset) => (
@@ -202,11 +232,11 @@ export default function ChatInterface({
                     size="sm"
                     onClick={() => handleDMPreset(preset)}
                     disabled={isLoading}
-                    className="flex-1 min-w-[120px] min-h-[44px] gap-2"
+                    className="text-xs h-8 px-2 truncate"
                     data-testid={`button-dm-preset-${preset.action}`}
                   >
                     {preset.icon}
-                    <span className="text-xs">{preset.label}</span>
+                    <span className="ml-1 truncate">{preset.label}</span>
                   </Button>
                 ))
               ) : (
@@ -217,48 +247,14 @@ export default function ChatInterface({
                     size="sm"
                     onClick={() => handleQuickAction(action.action)}
                     disabled={isLoading}
-                    className="flex-1 min-h-[44px] gap-2"
+                    className="text-xs h-8 px-2 truncate"
                     data-testid={`button-quick-action-${action.action}`}
                   >
                     {action.icon}
-                    {action.label}
+                    <span className="ml-1 truncate">{action.label}</span>
                   </Button>
                 ))
               )}
-            </div>
-          </div>
-          
-          {/* Voice Input */}
-          <div className="flex items-center gap-2">
-            <Button
-              size="icon"
-              variant={isListening ? "destructive" : "secondary"}
-              onClick={handleToggleListening}
-              className="shrink-0"
-              data-testid="button-voice-toggle"
-            >
-              {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-            </Button>
-            
-            <div className="flex-1 flex gap-2">
-              <input
-                type="text"
-                placeholder={isListening ? "Listening..." : isDirectDM ? "Ask the DM for help..." : "Speak as your character..."}
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSend()}
-                className="flex-1 px-3 py-2 bg-muted rounded-md text-sm text-foreground placeholder:text-muted-foreground border-none focus:outline-none focus:ring-2 focus:ring-primary"
-                disabled={isListening || isLoading}
-                data-testid="input-chat-message"
-              />
-              <Button 
-                size="icon" 
-                onClick={handleSend} 
-                disabled={!inputText.trim() || isListening || isLoading}
-                data-testid="button-send-message"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
             </div>
           </div>
         </CardContent>

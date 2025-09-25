@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Play } from "lucide-react";
+import CtaIndicator from "./CtaIndicator";
 
 interface StickyBottomActionsProps {
   onBack?: () => void;
@@ -29,7 +30,9 @@ export default function StickyBottomActions({
   className = ""
 }: StickyBottomActionsProps) {
   return (
-    <div className={`sticky bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur border-t border-border ${className}`}>
+    <>
+      <CtaIndicator />
+      <div className={`sticky bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur border-t border-border ${className}`}>
       {/* Safe area padding for mobile notches */}
       <div 
         className="px-4 py-3 space-y-3"
@@ -81,5 +84,6 @@ export default function StickyBottomActions({
         )}
       </div>
     </div>
+    </>
   );
 }
