@@ -1266,8 +1266,10 @@ Choose your path, adventurer. Your destiny awaits!`,
                   }
 
                   // Validate and create follow-up quest
+                  const activeCampaign = await storage.getActiveCampaign();
                   const questValidation = insertQuestSchema.safeParse({
                     ...followUpQuest,
+                    campaignId: activeCampaign?.id || 'default',
                     parentQuestId: updatedQuest.id,
                     chainId: updatedQuest.chainId || updatedQuest.id,
                     isMainStory: true,
@@ -1296,9 +1298,11 @@ Choose your path, adventurer. Your destiny awaits!`,
 
         // Create new quest if specified
         if (actions.createQuest) {
-          const questValidation = insertQuestSchema.safeParse(
-            actions.createQuest,
-          );
+          const activeCampaign = await storage.getActiveCampaign();
+          const questValidation = insertQuestSchema.safeParse({
+            ...actions.createQuest,
+            campaignId: activeCampaign?.id || 'default',
+          });
           if (questValidation.success) {
             await storage.createQuest(questValidation.data);
           } else {
@@ -1344,7 +1348,11 @@ Choose your path, adventurer. Your destiny awaits!`,
 
         // Give item if specified
         if (actions.giveItem) {
-          const itemValidation = insertItemSchema.safeParse(actions.giveItem);
+          const activeCampaign = await storage.getActiveCampaign();
+          const itemValidation = insertItemSchema.safeParse({
+            ...actions.giveItem,
+            campaignId: activeCampaign?.id || 'default',
+          });
           if (itemValidation.success) {
             await storage.createItem(itemValidation.data);
           } else {
@@ -1464,8 +1472,10 @@ Choose your path, adventurer. Your destiny awaits!`,
                   }
 
                   // Validate and create follow-up quest
+                  const activeCampaign = await storage.getActiveCampaign();
                   const questValidation = insertQuestSchema.safeParse({
                     ...followUpQuest,
+                    campaignId: activeCampaign?.id || 'default',
                     parentQuestId: updatedQuest.id,
                     chainId: updatedQuest.chainId || updatedQuest.id,
                     isMainStory: true,
@@ -1492,9 +1502,11 @@ Choose your path, adventurer. Your destiny awaits!`,
           }
         }
         if (actions.createQuest) {
-          const questValidation = insertQuestSchema.safeParse(
-            actions.createQuest,
-          );
+          const activeCampaign = await storage.getActiveCampaign();
+          const questValidation = insertQuestSchema.safeParse({
+            ...actions.createQuest,
+            campaignId: activeCampaign?.id || 'default',
+          });
           if (questValidation.success) {
             await storage.createQuest(questValidation.data);
           } else {
@@ -1534,7 +1546,11 @@ Choose your path, adventurer. Your destiny awaits!`,
           }
         }
         if (actions.giveItem) {
-          const itemValidation = insertItemSchema.safeParse(actions.giveItem);
+          const activeCampaign = await storage.getActiveCampaign();
+          const itemValidation = insertItemSchema.safeParse({
+            ...actions.giveItem,
+            campaignId: activeCampaign?.id || 'default',
+          });
           if (itemValidation.success) {
             await storage.createItem(itemValidation.data);
           } else {

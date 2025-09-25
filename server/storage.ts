@@ -541,6 +541,7 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const newMessage: Message = {
       id,
+      campaignId: message.campaignId,
       content: message.content,
       sender: message.sender,
       senderName: message.senderName ?? null,
