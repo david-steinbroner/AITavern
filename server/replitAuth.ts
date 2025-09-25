@@ -143,8 +143,26 @@ export async function setupAuth(app: Express) {
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
+  const session = (req as any).session;
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  // Check for demo mode session
+  if (process.env.DEMO_MODE_ENABLED === 'true' && session?.demo === true) {
+    // Ensure demo user claims are set on the request
+    if (!req.user) {
+      (req as any).user = {
+        claims: {
+          sub: session.demoUserId,
+          email: "demo@example.com",
+          first_name: "Demo",
+          last_name: "User"
+        }
+      };
+    }
+    return next();
+  }
+
+  // Regular authentication flow
+  if (!req.isAuthenticated() || !user?.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 

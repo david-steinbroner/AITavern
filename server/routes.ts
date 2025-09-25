@@ -76,7 +76,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       '/api/login',
       '/api/callback', 
       '/api/logout',
-      '/api/debug/check'
+      '/api/debug/check',
+      '/api/demo/status',
+      '/api/demo/start'
     ]);
     
     if (openEndpoints.has(req.path)) {
@@ -88,6 +90,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Initialize storage with default data
   await storage.init();
+
+  // Demo mode endpoints
+  app.get("/api/demo/status", (_req, res) => {
+    const enabled = process.env.DEMO_MODE_ENABLED === 'true';
+    res.json({ enabled });
+  });
+
+  app.post("/api/demo/start", (req: any, res) => {
+    const enabled = process.env.DEMO_MODE_ENABLED === 'true';
+    if (!enabled) {
+      return res.status(403).json({ error: "Demo mode is not enabled" });
+    }
+
+    // Set demo session flags
+    req.session.demo = true;
+    req.session.demoUserId = `demo-${randomUUID()}`;
+    
+    // Set minimal user claims for demo
+    req.user = {
+      claims: {
+        sub: req.session.demoUserId,
+        email: "demo@example.com",
+        first_name: "Demo",
+        last_name: "User"
+      }
+    };
+
+    console.log("✅ Demo session started for:", req.session.demoUserId);
+    res.json({ success: true, demoUserId: req.session.demoUserId });
+  });
 
   app.get("/api/debug/check", (_req, res) => {
     console.log("✅ /api/debug/check registered & hit");
