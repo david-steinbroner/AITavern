@@ -28,6 +28,7 @@ import ThemeToggle from "./components/ThemeToggle";
 import CharacterCreation from "./components/CharacterCreation";
 import AdventureTemplates from "./components/AdventureTemplates";
 import LandingPage from "./components/LandingPage";
+import DemoIndicator from "./components/DemoIndicator";
 import { useTooltips } from "./hooks/useTooltips";
 import { useNotifications } from "./hooks/useNotifications";
 
@@ -423,6 +424,9 @@ function GameApp() {
   // Main game view
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* Demo Mode Indicator */}
+      <DemoIndicator />
+      
       {/* Error Monitor */}
       <ErrorMonitor currentView={currentView} activeTab={activeTab} />
       
