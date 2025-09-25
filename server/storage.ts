@@ -99,6 +99,24 @@ export class MemStorage implements IStorage {
   }
 
   private async initializeDefaultData(): Promise<void> {
+    // Create a default campaign first
+    if (this.campaigns.size === 0) {
+      await this.createCampaign({
+        name: "Default Adventure",
+        description: "Your first adventure awaits!",
+        userId: null, // No user assigned yet
+      });
+      // Set the first campaign as active
+      const firstCampaign = Array.from(this.campaigns.values())[0];
+      if (firstCampaign) {
+        this.activeCampaignId = firstCampaign.id;
+      }
+    }
+
+    // Get the active campaign for default data creation
+    const activeCampaign = await this.getActiveCampaign();
+    const defaultCampaignId = activeCampaign?.id || Array.from(this.campaigns.keys())[0] || 'default-campaign';
+
     // Create a default character if none exists
     if (!this.character) {
       await this.createCharacter({
@@ -116,6 +134,11 @@ export class MemStorage implements IStorage {
         maxHealth: 10,
         currentMana: 0,
         maxMana: 0,
+        campaignId: defaultCampaignId,
+        templateId: null,
+        portraitUrl: null,
+        appearance: null,
+        backstory: null,
       });
     }
 
@@ -128,6 +151,7 @@ export class MemStorage implements IStorage {
         quantity: 1,
         rarity: 'common',
         equipped: true,
+        campaignId: defaultCampaignId,
       });
       
       await this.createItem({
@@ -137,6 +161,7 @@ export class MemStorage implements IStorage {
         quantity: 1,
         rarity: 'common',
         equipped: true,
+        campaignId: defaultCampaignId,
       });
       
       await this.createItem({
@@ -146,6 +171,7 @@ export class MemStorage implements IStorage {
         quantity: 2,
         rarity: 'common',
         equipped: false,
+        campaignId: defaultCampaignId,
       });
     }
 
@@ -159,6 +185,10 @@ export class MemStorage implements IStorage {
         progress: 0,
         maxProgress: 1,
         reward: 'Experience and glory',
+        campaignId: defaultCampaignId,
+        parentQuestId: null,
+        chainId: null,
+        isMainStory: true,
       });
     }
 
@@ -189,7 +219,17 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    const user: User = { 
+      id,
+      username: insertUser.username || null,
+      password: insertUser.password || null,
+      email: insertUser.email || null,
+      firstName: insertUser.firstName || null,
+      lastName: insertUser.lastName || null,
+      profileImageUrl: insertUser.profileImageUrl || null,
+      createdAt: insertUser.createdAt || new Date().toISOString(),
+      updatedAt: insertUser.updatedAt || new Date().toISOString(),
+    };
     this.users.set(id, user);
     return user;
   }
@@ -203,6 +243,8 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const newCharacter: Character = {
       id,
+      campaignId: character.campaignId,
+      templateId: character.templateId || null,
       name: character.name,
       class: character.class,
       level: character.level ?? 1,
@@ -217,6 +259,9 @@ export class MemStorage implements IStorage {
       maxHealth: character.maxHealth,
       currentMana: character.currentMana ?? 0,
       maxMana: character.maxMana ?? 0,
+      portraitUrl: character.portraitUrl || null,
+      appearance: character.appearance || null,
+      backstory: character.backstory || null,
     };
     this.character = newCharacter;
     return this.character;
@@ -305,6 +350,7 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const newQuest: Quest = {
       id,
+      campaignId: quest.campaignId,
       title: quest.title,
       description: quest.description,
       status: quest.status,
@@ -396,6 +442,7 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const newItem: Item = {
       id,
+      campaignId: item.campaignId,
       name: item.name,
       type: item.type,
       description: item.description ?? null,
@@ -510,6 +557,7 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const newEnemy: Enemy = {
       id,
+      campaignId: enemy.campaignId,
       name: enemy.name,
       level: enemy.level ?? 1,
       currentHealth: enemy.currentHealth,
@@ -519,7 +567,7 @@ export class MemStorage implements IStorage {
       speed: enemy.speed ?? 10,
       combatId: enemy.combatId ?? null,
       isActive: enemy.isActive ?? true,
-      abilities: enemy.abilities ?? [],
+      abilities: enemy.abilities ? enemy.abilities : null,
     };
     this.enemies.set(id, newEnemy);
     return newEnemy;
@@ -571,9 +619,10 @@ export class MemStorage implements IStorage {
   async createCampaign(campaign: InsertCampaign): Promise<Campaign> {
     const id = randomUUID();
     const newCampaign: Campaign = { 
-      ...campaign,
-      description: campaign.description || '',
       id,
+      name: campaign.name,
+      description: campaign.description || '',
+      userId: campaign.userId || null,
       createdAt: new Date().toISOString(),
       lastPlayed: new Date().toISOString(),
       isActive: false
