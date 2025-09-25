@@ -104,7 +104,7 @@ export default function EditableCampaignName({
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <h1 className="font-serif text-base sm:text-lg md:text-xl text-primary text-center truncate max-w-[160px] sm:max-w-[200px] md:max-w-none" data-testid="campaign-title">
+      <h1 className="font-serif text-base sm:text-lg md:text-xl text-primary text-center truncate max-w-[240px] sm:max-w-[300px] md:max-w-none" data-testid="campaign-title">
         ⚔️ {campaignName}
       </h1>
       <Button
