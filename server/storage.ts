@@ -104,8 +104,8 @@ export class MemStorage implements IStorage {
     // Create a default campaign first
     if (this.campaigns.size === 0) {
       await this.createCampaign({
-        name: "Default Adventure",
-        description: "Your first adventure awaits!",
+        name: "Skunk Tales Adventure",
+        description: "Embark on a cozy woodland adventure with magical creatures!",
         userId: null, // No user assigned yet
       });
       // Set the first campaign as active

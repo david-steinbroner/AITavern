@@ -9,15 +9,15 @@ interface LandingPageProps {
 
 export default function LandingPage({ onLogin }: LandingPageProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-orange-50 dark:from-purple-950 dark:to-orange-950">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-green-50 dark:from-amber-950 dark:to-green-950">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-orange-500 rounded-lg flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-green-600 rounded-lg flex items-center justify-center">
               <Gamepad2 className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-orange-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-700 to-green-700 bg-clip-text text-transparent">
               Skunk Tales
             </h1>
           </div>
@@ -32,7 +32,7 @@ export default function LandingPage({ onLogin }: LandingPageProps) {
           <Card className="hover-elevate">
             <CardHeader>
               <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-purple-500" />
+                <MapPin className="w-5 h-5 text-green-600" />
                 <CardTitle className="text-lg">AI Adventure Guide</CardTitle>
               </div>
             </CardHeader>
@@ -46,7 +46,7 @@ export default function LandingPage({ onLogin }: LandingPageProps) {
           <Card className="hover-elevate">
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-orange-500" />
+                <Users className="w-5 h-5 text-amber-600" />
                 <CardTitle className="text-lg">Character Creation</CardTitle>
               </div>
             </CardHeader>
@@ -60,7 +60,7 @@ export default function LandingPage({ onLogin }: LandingPageProps) {
           <Card className="hover-elevate">
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-purple-500" />
+                <Zap className="w-5 h-5 text-green-600" />
                 <CardTitle className="text-lg">Mobile-First Gaming</CardTitle>
               </div>
             </CardHeader>
@@ -106,7 +106,7 @@ export default function LandingPage({ onLogin }: LandingPageProps) {
               <Button 
                 onClick={onLogin}
                 size="lg"
-                className="w-full bg-gradient-to-r from-purple-500 to-orange-500 hover:from-purple-600 hover:to-orange-600"
+                className="w-full bg-gradient-to-r from-amber-600 to-green-600 hover:from-amber-700 hover:to-green-700"
                 data-testid="button-login"
               >
                 Start Playing
