@@ -46,6 +46,11 @@ export function trackPageView(pageName: string) {
 
 // Game-specific event helpers
 export const analytics = {
+  // Generic event tracker
+  trackEvent: (eventName: string, properties?: Record<string, any>) => {
+    trackEvent(eventName, properties);
+  },
+
   // Character events
   characterCreated: (characterData: { name: string; class: string; level: number }) => {
     trackEvent('character_created', characterData);
