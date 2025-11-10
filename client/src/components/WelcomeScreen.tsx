@@ -99,7 +99,7 @@ export default function WelcomeScreen({
 
         {/* Existing Players */}
         <Card className="border-muted/20">
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 pb-6">
             <div className="text-center space-y-3">
               <div className="flex items-center justify-center gap-2">
                 <Star className="w-4 h-4 text-muted-foreground" />
@@ -117,18 +117,6 @@ export default function WelcomeScreen({
             </div>
           </CardContent>
         </Card>
-
-        {/* Features Preview */}
-        <div className="grid grid-cols-1 gap-3 text-center">
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p className="font-medium">What you'll experience:</p>
-            <div className="flex justify-center gap-4">
-              <span>• AI Dungeon Master</span>
-              <span>• Dynamic Stories</span>
-              <span>• Multiple Adventures</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
