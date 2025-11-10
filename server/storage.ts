@@ -489,6 +489,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
 
   async clearAllAdventureData(): Promise<void> {
     // Clear all game data for a fresh start
+    this.character = undefined; // Clear character
     this.messages = [];
     this.quests.clear();
     this.items.clear();
