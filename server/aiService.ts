@@ -2,8 +2,14 @@ import OpenAI from "openai";
 import { storage } from "./storage";
 import type { Character, Quest, Item, Message, Enemy, GameState } from "@shared/schema";
 
-// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const openai = new OpenAI({
+    apiKey: process.env.OPENROUTER_API_KEY,
+    baseURL: "https://openrouter.ai/api/v1",
+    defaultHeaders: {
+      "HTTP-Referer": "https://aitavern.onrender.com", // Your site URL
+      "X-Title": "AI Tavern", // Your app name
+    }
+  });
 
 export interface AIResponse {
   content: string;
@@ -201,7 +207,7 @@ QUEST PROGRESSION RULES:
       ];
 
       const response = await openai.chat.completions.create({
-        model: "gpt-5",
+        model: "anthropic/claude-3.5-haiku",
         messages,
         response_format: { type: "json_object" },
       });
@@ -298,7 +304,7 @@ QUEST PROGRESSION RULES:
   }): Promise<Quest | null> {
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-5",
+        model: "anthropic/claude-3.5-haiku",
         messages: [
           {
             role: "system",
@@ -341,7 +347,7 @@ QUEST PROGRESSION RULES:
       const context = await this.getGameContext();
       
       const response = await openai.chat.completions.create({
-        model: "gpt-5",
+        model: "anthropic/claude-3.5-haiku",
         messages: [
           {
             role: "system",
@@ -382,7 +388,7 @@ Make quests appropriate for the character level and current location.`
   async generateNPCDialogue(npcName: string, context: string, playerMessage: string): Promise<string> {
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-5",
+        model: "anthropic/claude-3.5-haiku",
         messages: [
           {
             role: "system",
@@ -409,8 +415,8 @@ Respond as ${npcName} would, staying true to their character and the situation.`
 
   async generateCharacterPortrait(name: string, appearance: string): Promise<string> {
     try {
-      if (!process.env.OPENAI_API_KEY) {
-        throw new Error('OpenAI API key not configured');
+      if (!process.env.OPENROUTER_API_KEY) {
+        throw new Error('Image generation not available');
       }
 
       // Sanitize input to prevent prompt injection
