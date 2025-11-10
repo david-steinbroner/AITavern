@@ -172,6 +172,17 @@ export class MemStorage implements IStorage {
         currentTurn: null,
         combatId: null,
         turnCount: 0,
+
+    // Initialize with welcome message from DM
+    if (this.messages.length === 0) {
+      this.messages.push({
+        id: randomUUID(),
+        content: "Greetings, brave adventurer! I am your Dungeon Master, here to guide you through epic tales and dangerous quests. You find yourself in the Starting Village, where your journey begins. What would you like to do?",
+        sender: "dm",
+        senderName: null,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+    }
       };
     }
   }
