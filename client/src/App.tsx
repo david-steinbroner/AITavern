@@ -20,6 +20,7 @@ import DemoTooltip from "./components/DemoTooltip";
 import ThemeToggle from "./components/ThemeToggle";
 import CharacterCreation from "./components/CharacterCreation";
 import AdventureTemplates from "./components/AdventureTemplates";
+import ColdStartLoader from "./components/ColdStartLoader";
 import { useTooltips } from "./hooks/useTooltips";
 import { useAnalytics, useSessionTracking } from "./hooks/useAnalytics";
 import { useNotifications } from "./hooks/useNotifications";
@@ -73,8 +74,10 @@ function GameApp() {
   }, [demoCompleted, seenTooltips.size, currentView]);
   
   // Fetch real data from backend
-  const { data: character, isLoading: characterLoading } = useQuery<Character>({
+  const { data: character, isLoading: characterLoading, error: characterError } = useQuery<Character>({
     queryKey: ['/api/character'],
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   const { data: quests = [], isLoading: questsLoading } = useQuery<Quest[]>({
@@ -410,7 +413,14 @@ function GameApp() {
 
   // Main game view
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <>
+      {/* Cold Start Loader */}
+      <ColdStartLoader
+        isLoading={characterLoading}
+        error={characterError as Error | null}
+      />
+
+      <div className="min-h-screen bg-background text-foreground">
       {/* Page Title */}
       <div className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border">
         <div className="flex items-center justify-between h-16 px-3 sm:px-4">
@@ -488,6 +498,7 @@ function GameApp() {
         />
       )}
     </div>
+    </>
   );
 }
 
