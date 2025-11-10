@@ -215,6 +215,12 @@ RESPONSE REQUIREMENTS:
 
 3. **Quest Tracking**: Check if this action relates to active quests and update accordingly
 
+4. **JSON Formatting**: You MUST return valid JSON. In the "content" field:
+   - Use \\n for line breaks (not raw newlines)
+   - Use \\t for tabs (not raw tab characters)
+   - Escape all special characters properly
+   - Do NOT include raw control characters
+
 Format your response as JSON with this structure:
 {
   "content": "Your response following the narrative structure with player options in bullet points",
@@ -262,26 +268,37 @@ Example Quest Actions:
         console.error('JSON parse error, attempting to sanitize:', parseError.message);
         const rawContent = response.choices[0].message.content || '{}';
 
-        // Remove or escape control characters that break JSON parsing
-        // but preserve intended newlines in the content
-        const sanitized = rawContent
-          .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // Remove control chars except \n, \r, \t
-          .replace(/\n/g, '\\n')  // Escape newlines
-          .replace(/\r/g, '\\r')  // Escape carriage returns
-          .replace(/\t/g, '\\t'); // Escape tabs
+        // Sanitize JSON by properly escaping string content
+        // Strategy: Find string values and escape special characters within them
+        let sanitized = rawContent;
+
+        // First, remove any truly invalid control characters (not \n, \r, \t)
+        sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+
+        // Fix unescaped newlines, carriage returns, and tabs within JSON strings
+        // This regex finds strings and escapes special chars within them
+        sanitized = sanitized.replace(/"(?:[^"\\]|\\.)*"/g, (match) => {
+          return match
+            .replace(/\n/g, '\\n')
+            .replace(/\r/g, '\\r')
+            .replace(/\t/g, '\\t');
+        });
 
         try {
           aiResponse = JSON.parse(sanitized);
         } catch (secondError) {
-          // If still failing, return a fallback response
+          // If still failing, log the problematic content and return a fallback response
           console.error('Failed to parse AI response even after sanitization:', secondError);
+          console.error('Problematic content (first 500 chars):', rawContent.substring(0, 500));
+
           captureError(new Error(`JSON parse failed: ${parseError.message}`), {
             context: "AI response parsing",
-            rawContent: rawContent.substring(0, 500) // Only log first 500 chars
+            rawContent: rawContent.substring(0, 500), // Only log first 500 chars
+            sanitizedContent: sanitized.substring(0, 500)
           });
 
           return {
-            content: "The DM pauses, considering your words... (There was an issue with the mystical connection. Please try again.)",
+            content: "The narrator pauses, gathering their thoughts... (There was an issue processing the response. Please try again.)",
             sender: 'dm',
             senderName: null,
             actions: undefined
