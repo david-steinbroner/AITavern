@@ -394,7 +394,8 @@ function GameApp() {
               name: template.name,
               setting: template.setting,
               initialScene: template.initialScene,
-              initialQuest: template.initialQuest
+              initialQuest: template.initialQuest,
+              introMessage: template.introMessage
             });
             
             // Invalidate queries to refresh data
