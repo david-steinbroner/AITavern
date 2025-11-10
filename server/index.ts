@@ -1,4 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
+// Initialize Sentry for error tracking
+import { initSentry, Sentry } from "./sentry";
+initSentry();
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 

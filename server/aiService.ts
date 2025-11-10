@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
 import type { Character, Quest, Item, Message, Enemy, GameState } from "@shared/schema";
+import { captureError } from "./sentry";
 
   const openai = new OpenAI({
     apiKey: process.env.OPENROUTER_API_KEY || "sk-placeholder",
@@ -227,7 +228,7 @@ QUEST PROGRESSION RULES:
       };
 
     } catch (error: any) {
-      console.error('Error generating AI response:', error);
+      captureError(error as Error, { context: "AI response generation" }); console.error('Error generating AI response:', error);
       
       // Enhanced error handling based on error type
       let fallbackContent = "";
@@ -341,7 +342,7 @@ QUEST PROGRESSION RULES:
       return result.title ? result : null;
       
     } catch (error) {
-      console.error('Error generating follow-up quest:', error);
+      captureError(error as Error, { context: "Follow-up quest generation" }); console.error('Error generating follow-up quest:', error);
       return null;
     }
   }
@@ -384,7 +385,7 @@ Make quests appropriate for the character level and current location.`
       return Array.isArray(result.quests) ? result.quests : [];
       
     } catch (error) {
-      console.error('Error generating quest ideas:', error);
+      captureError(error as Error, { context: "Quest ideas generation" }); console.error('Error generating quest ideas:', error);
       return [];
     }
   }
@@ -412,7 +413,7 @@ Respond as ${npcName} would, staying true to their character and the situation.`
       return response.choices[0].message.content || "...";
       
     } catch (error) {
-      console.error('Error generating NPC dialogue:', error);
+      captureError(error as Error, { context: "NPC dialogue generation" }); console.error('Error generating NPC dialogue:', error);
       return "The NPC seems distracted and doesn't respond.";
     }
   }
@@ -448,7 +449,7 @@ Respond as ${npcName} would, staying true to their character and the situation.`
 
       return response.data[0].url;
     } catch (error: any) {
-      console.error('Error generating character portrait:', error);
+      captureError(error as Error, { context: "Character portrait generation" }); console.error('Error generating character portrait:', error);
       
       // Handle specific error types
       if (error?.status === 429) {
