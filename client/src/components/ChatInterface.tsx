@@ -72,22 +72,22 @@ export default function ChatInterface({
   return (
     <div className={`h-full flex flex-col ${className}`} data-testid="chat-interface">
       <Card className="flex-1 flex flex-col">
-        <CardHeader className="pb-3">
+        <CardHeader>
           <CardTitle className="font-serif text-xl">Adventure Chat</CardTitle>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-muted-foreground mt-2">
             Speak with the DM and NPCs • Use voice or quick actions
           </div>
         </CardHeader>
-        
+
         <CardContent className="flex-1 flex flex-col space-y-4">
           {/* Messages */}
           <ScrollArea className="flex-1" ref={scrollRef}>
-            <div className="space-y-3 pr-4">
+            <div className="space-y-4 pr-4">
               {messages.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No messages yet</p>
-                  <p className="text-sm">Start your adventure by speaking or using quick actions!</p>
+                  <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-base">No messages yet</p>
+                  <p className="text-sm mt-2">Start your adventure by speaking or using quick actions!</p>
                 </div>
               ) : (
                 messages.map((message) => (
@@ -97,8 +97,8 @@ export default function ChatInterface({
                       <span className="text-xs text-muted-foreground">{message.timestamp}</span>
                     </div>
                     <div className={`p-3 rounded-lg ${
-                      message.sender === "player" 
-                        ? "bg-primary/10 border-l-4 border-primary ml-4" 
+                      message.sender === "player"
+                        ? "bg-primary/10 border-l-4 border-primary ml-4"
                         : "bg-muted/50"
                     }`}>
                       <p className="text-sm text-foreground">{message.content}</p>
@@ -106,7 +106,7 @@ export default function ChatInterface({
                   </div>
                 ))
               )}
-              
+
               {/* AI Thinking Indicator */}
               {isLoading && (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 animate-pulse">

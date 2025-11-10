@@ -60,16 +60,16 @@ export default function Inventory({ items, onItemTap, onItemLongPress, className
             </TabsList>
             
             <TabsContent value="all" className="flex-1 overflow-auto mt-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 {allItems.length === 0 ? (
                   <div className="col-span-2">
                     <EmptyState type="" />
                   </div>
                 ) : (
                   allItems.map((item) => (
-                    <ItemCard 
-                      key={item.id} 
-                      item={item} 
+                    <ItemCard
+                      key={item.id}
+                      item={item}
                       onTap={onItemTap}
                       onLongPress={onItemLongPress}
                     />
@@ -77,18 +77,18 @@ export default function Inventory({ items, onItemTap, onItemLongPress, className
                 )}
               </div>
             </TabsContent>
-            
+
             <TabsContent value="weapons" className="flex-1 overflow-auto mt-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 {weapons.length === 0 ? (
                   <div className="col-span-2">
                     <EmptyState type="weapon" />
                   </div>
                 ) : (
                   weapons.map((item) => (
-                    <ItemCard 
-                      key={item.id} 
-                      item={item} 
+                    <ItemCard
+                      key={item.id}
+                      item={item}
                       onTap={onItemTap}
                       onLongPress={onItemLongPress}
                     />
@@ -96,18 +96,18 @@ export default function Inventory({ items, onItemTap, onItemLongPress, className
                 )}
               </div>
             </TabsContent>
-            
+
             <TabsContent value="armor" className="flex-1 overflow-auto mt-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 {armor.length === 0 ? (
                   <div className="col-span-2">
                     <EmptyState type="armor" />
                   </div>
                 ) : (
                   armor.map((item) => (
-                    <ItemCard 
-                      key={item.id} 
-                      item={item} 
+                    <ItemCard
+                      key={item.id}
+                      item={item}
                       onTap={onItemTap}
                       onLongPress={onItemLongPress}
                     />
@@ -115,18 +115,18 @@ export default function Inventory({ items, onItemTap, onItemLongPress, className
                 )}
               </div>
             </TabsContent>
-            
+
             <TabsContent value="consumables" className="flex-1 overflow-auto mt-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 {consumables.length === 0 ? (
                   <div className="col-span-2">
                     <EmptyState type="consumable" />
                   </div>
                 ) : (
                   consumables.map((item) => (
-                    <ItemCard 
-                      key={item.id} 
-                      item={item} 
+                    <ItemCard
+                      key={item.id}
+                      item={item}
                       onTap={onItemTap}
                       onLongPress={onItemLongPress}
                     />
@@ -134,18 +134,18 @@ export default function Inventory({ items, onItemTap, onItemLongPress, className
                 )}
               </div>
             </TabsContent>
-            
+
             <TabsContent value="misc" className="flex-1 overflow-auto mt-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 {misc.length === 0 ? (
                   <div className="col-span-2">
                     <EmptyState type="misc" />
                   </div>
                 ) : (
                   misc.map((item) => (
-                    <ItemCard 
-                      key={item.id} 
-                      item={item} 
+                    <ItemCard
+                      key={item.id}
+                      item={item}
                       onTap={onItemTap}
                       onLongPress={onItemLongPress}
                     />

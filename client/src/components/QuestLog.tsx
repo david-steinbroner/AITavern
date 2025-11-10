@@ -52,56 +52,56 @@ export default function QuestLog({ quests, onQuestClick, className = "" }: Quest
             </TabsList>
             
             <TabsContent value="active" className="flex-1 overflow-auto mt-4">
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {activeQuests.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    <ScrollText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>No active quests</p>
-                    <p className="text-sm">Speak with NPCs to discover new adventures!</p>
+                    <ScrollText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p className="text-base">No active quests</p>
+                    <p className="text-sm mt-2">Speak with NPCs to discover new adventures!</p>
                   </div>
                 ) : (
                   activeQuests.map((quest) => (
-                    <QuestCard 
-                      key={quest.id} 
-                      quest={quest} 
+                    <QuestCard
+                      key={quest.id}
+                      quest={quest}
                       onClick={() => onQuestClick?.(quest)}
                     />
                   ))
                 )}
               </div>
             </TabsContent>
-            
+
             <TabsContent value="completed" className="flex-1 overflow-auto mt-4">
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {completedQuests.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    <CheckCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>No completed quests yet</p>
+                    <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p className="text-base">No completed quests yet</p>
                   </div>
                 ) : (
                   completedQuests.map((quest) => (
-                    <QuestCard 
-                      key={quest.id} 
-                      quest={quest} 
+                    <QuestCard
+                      key={quest.id}
+                      quest={quest}
                       onClick={() => onQuestClick?.(quest)}
                     />
                   ))
                 )}
               </div>
             </TabsContent>
-            
+
             <TabsContent value="failed" className="flex-1 overflow-auto mt-4">
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {failedQuests.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    <XCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>No failed quests</p>
+                    <XCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p className="text-base">No failed quests</p>
                   </div>
                 ) : (
                   failedQuests.map((quest) => (
-                    <QuestCard 
-                      key={quest.id} 
-                      quest={quest} 
+                    <QuestCard
+                      key={quest.id}
+                      quest={quest}
                       onClick={() => onQuestClick?.(quest)}
                     />
                   ))
