@@ -216,155 +216,142 @@ export default function AdventureTemplates({
   return (
     <div className={`min-h-screen bg-background text-foreground p-4 ${className}`}>
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <Card className="mb-6">
-          <CardHeader className="text-center">
-            <CardTitle className="font-serif text-3xl flex items-center justify-center gap-2">
-              <Scroll className="w-8 h-8 text-primary" />
-              Adventure Templates
-            </CardTitle>
-            <p className="text-muted-foreground text-lg">
-              Choose your adventure setting and begin your epic journey
-            </p>
-          </CardHeader>
-        </Card>
+        {/* Header - Compact */}
+        <div className="text-center mb-6">
+          <h1 className="font-serif text-2xl flex items-center justify-center gap-2 text-primary mb-2">
+            <Scroll className="w-6 h-6" />
+            Adventure Templates
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Choose your adventure setting and begin your epic journey
+          </p>
+        </div>
 
-        {/* Template Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        {/* Template Grid - Compact */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           {adventureTemplates.map((template) => (
-            <Card 
+            <Card
               key={template.id}
               className={`cursor-pointer transition-all hover-elevate ${
-                selectedTemplate?.id === template.id 
-                  ? 'ring-2 ring-primary border-primary' 
+                selectedTemplate?.id === template.id
+                  ? 'ring-2 ring-primary border-primary'
                   : ''
               }`}
               onClick={() => handleSelectTemplate(template)}
               data-testid={`template-${template.id}`}
             >
-              <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="text-primary">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="text-primary shrink-0">
                       {template.icon}
                     </div>
-                    <div>
-                      <CardTitle className="text-lg font-serif">
+                    <div className="min-w-0">
+                      <CardTitle className="text-base font-serif truncate">
                         {template.name}
                       </CardTitle>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs text-muted-foreground truncate">
                         {template.setting}
                       </p>
                     </div>
                   </div>
-                  <Badge 
-                    className={`text-xs ${difficultyColors[template.difficulty]}`}
+                  <Badge
+                    className={`text-xs shrink-0 ${difficultyColors[template.difficulty]}`}
                     data-testid={`difficulty-${template.difficulty.toLowerCase()}`}
                   >
                     {template.difficulty}
                   </Badge>
                 </div>
               </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground leading-relaxed">
+
+              <CardContent className="space-y-3 pt-0">
+                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
                   {template.description}
                 </p>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Theme:</span>
+
+                <div className="flex gap-4 text-xs">
+                  <div className="flex-1">
+                    <span className="text-muted-foreground">Theme: </span>
                     <span className="font-medium">{template.theme}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Length:</span>
-                    <span className="font-medium">{template.estimatedLength}</span>
+                  <div className="shrink-0">
+                    <span className="text-muted-foreground">{template.estimatedLength}</span>
                   </div>
                 </div>
 
-                <div>
-                  <h4 className="text-sm font-medium mb-2">World Features:</h4>
-                  <div className="flex flex-wrap gap-1">
-                    {template.worldFeatures.slice(0, 3).map((feature, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        {feature}
-                      </Badge>
-                    ))}
-                    {template.worldFeatures.length > 3 && (
-                      <Badge variant="secondary" className="text-xs">
-                        +{template.worldFeatures.length - 3} more
-                      </Badge>
-                    )}
-                  </div>
+                <div className="flex flex-wrap gap-1">
+                  {template.worldFeatures.slice(0, 2).map((feature, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {feature}
+                    </Badge>
+                  ))}
+                  {template.worldFeatures.length > 2 && (
+                    <Badge variant="secondary" className="text-xs">
+                      +{template.worldFeatures.length - 2} more
+                    </Badge>
+                  )}
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* Selected Template Details */}
+        {/* Selected Template Details - Compact */}
         {selectedTemplate && (
-          <Card className="mb-6 border-primary">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="mb-20 border-primary bg-primary/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 {selectedTemplate.icon}
-                {selectedTemplate.name} - Preview
+                {selectedTemplate.name}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               <div>
-                <h4 className="font-medium mb-2">Starting Quest:</h4>
-                <Card>
-                  <CardContent className="pt-4">
-                    <h5 className="font-medium text-primary">{selectedTemplate.initialQuest.title}</h5>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {selectedTemplate.initialQuest.description}
-                    </p>
-                  </CardContent>
-                </Card>
+                <h4 className="font-medium text-sm mb-1">Starting Quest</h4>
+                <div className="p-3 rounded-md bg-background">
+                  <p className="font-medium text-sm text-primary">{selectedTemplate.initialQuest.title}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {selectedTemplate.initialQuest.description}
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <h4 className="font-medium mb-2">Starting Location:</h4>
-                <p className="text-sm bg-muted p-3 rounded-md">
-                  {selectedTemplate.initialScene}
-                </p>
-              </div>
-
-              <div>
-                <h4 className="font-medium mb-2">All World Features:</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {selectedTemplate.worldFeatures.map((feature, index) => (
-                    <div key={index} className="flex items-center gap-2 text-sm">
-                      <Mountain className="w-3 h-3 text-muted-foreground" />
-                      <span>{feature}</span>
-                    </div>
-                  ))}
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <h4 className="font-medium text-sm mb-1">Starting Location</h4>
+                  <p className="text-muted-foreground">{selectedTemplate.initialScene}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-sm mb-1">Features</h4>
+                  <p className="text-muted-foreground">{selectedTemplate.worldFeatures.length} unique locations</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Navigation */}
-        <div className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={onBack}
-            data-testid="button-templates-back"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Menu
-          </Button>
-          
-          <Button
-            onClick={handleConfirmSelection}
-            disabled={!selectedTemplate}
-            data-testid="button-start-adventure"
-          >
-            Start Adventure
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
+        {/* Navigation - Sticky */}
+        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t border-border p-4">
+          <div className="max-w-6xl mx-auto flex justify-between">
+            <Button
+              variant="outline"
+              onClick={onBack}
+              data-testid="button-templates-back"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Menu
+            </Button>
+
+            <Button
+              onClick={handleConfirmSelection}
+              disabled={!selectedTemplate}
+              size="lg"
+              data-testid="button-start-adventure"
+            >
+              Start Adventure
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>

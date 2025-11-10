@@ -1,8 +1,23 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, HelpCircle, Sword, Scroll, UserPlus, Map, XCircle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Play, HelpCircle, Sword, Scroll, UserPlus, Map, Trash2, Sparkles } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import type { Character } from "@shared/schema";
+import { useState } from "react";
+import type { Character, Quest, Message } from "@shared/schema";
 
 interface StartMenuProps {
   onStartGame: () => void;
@@ -20,12 +35,43 @@ export default function StartMenu({
   onShowAdventureTemplates,
   onEndAdventure,
 }: StartMenuProps) {
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showOverviewModal, setShowOverviewModal] = useState(false);
+
   // Check if user has an active character/game
   const { data: character } = useQuery<Character>({
     queryKey: ['/api/character'],
   });
 
+  const { data: quests = [] } = useQuery<Quest[]>({
+    queryKey: ['/api/quests'],
+  });
+
+  const { data: messages = [] } = useQuery<Message[]>({
+    queryKey: ['/api/messages'],
+  });
+
   const hasActiveGame = !!character;
+  const activeQuests = quests.filter(q => q.status === 'active');
+  const recentMessage = messages.length > 1 ? messages[messages.length - 1] : null;
+
+  const handleContinueClick = () => {
+    setShowOverviewModal(true);
+  };
+
+  const handleConfirmContinue = () => {
+    setShowOverviewModal(false);
+    onStartGame();
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = () => {
+    setShowDeleteModal(false);
+    onEndAdventure?.();
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 py-6">
@@ -50,7 +96,7 @@ export default function StartMenu({
           <Card className="p-6 hover-elevate border-primary/30 bg-primary/5">
             <div className="flex gap-3">
               <Button
-                onClick={onStartGame}
+                onClick={handleContinueClick}
                 size="lg"
                 className="flex-1 text-lg font-semibold h-14"
                 data-testid="button-start-game"
@@ -59,15 +105,24 @@ export default function StartMenu({
                 Continue Adventure
               </Button>
               {onEndAdventure && (
-                <Button
-                  onClick={onEndAdventure}
-                  variant="destructive"
-                  size="lg"
-                  className="h-14"
-                  data-testid="button-end-adventure"
-                >
-                  <XCircle className="w-5 h-5" />
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={handleDeleteClick}
+                        variant="destructive"
+                        size="lg"
+                        className="h-14"
+                        data-testid="button-delete-adventure"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Delete Current Adventure</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
             </div>
             <p className="text-sm text-muted-foreground mt-3 text-center">
@@ -81,6 +136,7 @@ export default function StartMenu({
           {/* Adventure Templates */}
           <Card className="p-6 hover-elevate">
             <Button
+              variant="outline"
               onClick={onShowAdventureTemplates}
               className="w-full font-semibold h-12"
               data-testid="button-adventure-templates"
@@ -126,6 +182,104 @@ export default function StartMenu({
           </Card>
         </div>
       </div>
+
+      {/* Adventure Overview Modal */}
+      <Dialog open={showOverviewModal} onOpenChange={setShowOverviewModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-serif text-2xl">
+              <Sparkles className="w-6 h-6 text-primary" />
+              Your Adventure
+            </DialogTitle>
+            <DialogDescription>
+              Review your current progress before continuing
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Character Info */}
+            {character && (
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase">Character</h3>
+                <div className="p-4 rounded-lg bg-muted/50">
+                  <p className="font-serif text-lg">{character.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Level {character.level} {character.class}
+                  </p>
+                  <div className="flex gap-4 mt-2 text-xs">
+                    <span>HP: {character.currentHealth}/{character.maxHealth}</span>
+                    <span>XP: {character.experience}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Active Quests */}
+            {activeQuests.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase">
+                  Active Quests ({activeQuests.length})
+                </h3>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {activeQuests.map((quest) => (
+                    <div key={quest.id} className="p-3 rounded-lg bg-muted/50 text-sm">
+                      <p className="font-medium">{quest.title}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Progress: {quest.progress}/{quest.maxProgress}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Last Story Event */}
+            {recentMessage && recentMessage.sender !== 'player' && (
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase">Last Story Event</h3>
+                <div className="p-4 rounded-lg bg-muted/50 text-sm max-h-32 overflow-y-auto">
+                  <p className="text-muted-foreground line-clamp-4">
+                    {recentMessage.content.substring(0, 200)}
+                    {recentMessage.content.length > 200 && '...'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOverviewModal(false)}>
+              Back to Menu
+            </Button>
+            <Button onClick={handleConfirmContinue}>
+              <Play className="w-4 h-4 mr-2" />
+              Continue Adventure
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Adventure?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete your current adventure, including your character,
+              quests, items, and all progress. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Adventure
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
