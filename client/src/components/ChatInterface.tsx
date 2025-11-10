@@ -4,37 +4,54 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import PageHeader from "./PageHeader";
 import EmptyState from "./EmptyState";
-import { Mic, MicOff, Send, Swords, Eye, MessageSquare, Loader2 } from "lucide-react";
+import { Mic, MicOff, Send, MessageSquare, Loader2, XCircle } from "lucide-react";
 import type { Message } from "@shared/schema";
 import { useState, useRef, useEffect } from "react";
 
 interface ChatInterfaceProps {
   messages: Message[];
   onSendMessage?: (content: string) => void;
-  onQuickAction?: (action: string) => void;
   isListening?: boolean;
   onToggleListening?: () => void;
   isLoading?: boolean;
   className?: string;
+  onEndAdventure?: () => void;
 }
 
-export default function ChatInterface({ 
-  messages, 
-  onSendMessage, 
-  onQuickAction,
+// Helper function to parse message content and extract options
+function parseMessageContent(content: string): { text: string; options: string[] } {
+  const lines = content.split('\n');
+  const options: string[] = [];
+  let text = '';
+  let inOptions = false;
+
+  for (const line of lines) {
+    // Check if line starts with bullet point (•, -, or *)
+    if (line.trim().match(/^[•\-\*]\s+/)) {
+      inOptions = true;
+      options.push(line.trim().replace(/^[•\-\*]\s+/, ''));
+    } else if (line.trim().toLowerCase().includes('what do you do')) {
+      inOptions = true;
+      // Don't add this line to text or options
+    } else if (!inOptions) {
+      text += line + '\n';
+    }
+  }
+
+  return { text: text.trim(), options };
+}
+
+export default function ChatInterface({
+  messages,
+  onSendMessage,
   isListening = false,
   onToggleListening,
   isLoading = false,
-  className = "" 
+  className = "",
+  onEndAdventure
 }: ChatInterfaceProps) {
   const [inputText, setInputText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
-  
-  const quickActions = [
-    { label: "Attack", action: "attack", icon: <Swords className="w-4 h-4" /> },
-    { label: "Investigate", action: "investigate", icon: <Eye className="w-4 h-4" /> },
-    { label: "Talk", action: "talk", icon: <MessageSquare className="w-4 h-4" /> },
-  ];
   
   useEffect(() => {
     if (scrollRef.current) {
@@ -49,12 +66,7 @@ export default function ChatInterface({
       console.log('Message sent:', inputText);
     }
   };
-  
-  const handleQuickAction = (action: string) => {
-    onQuickAction?.(action);
-    console.log('Quick action triggered:', action);
-  };
-  
+
   const handleToggleListening = () => {
     onToggleListening?.();
     console.log('Speech recognition toggled:', !isListening);
@@ -76,7 +88,13 @@ export default function ChatInterface({
       <Card className="flex-1 flex flex-col">
         <PageHeader
           title="Adventure Chat"
-          subtitle="Speak with the DM and NPCs • Use voice or quick actions"
+          subtitle="Speak with the DM and NPCs"
+          action={{
+            label: "End Adventure",
+            onClick: onEndAdventure || (() => {}),
+            icon: XCircle,
+            variant: "destructive"
+          }}
         />
 
         <CardContent className="flex-1 flex flex-col space-y-4">
@@ -90,21 +108,45 @@ export default function ChatInterface({
                   description="Start your adventure by speaking or using quick actions!"
                 />
               ) : (
-                messages.map((message) => (
-                  <div key={message.id} className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      {getSenderBadge(message.sender, message.senderName)}
-                      <span className="text-xs text-muted-foreground">{message.timestamp}</span>
+                messages.map((message) => {
+                  const { text, options } = parseMessageContent(message.content);
+                  const isPlayer = message.sender === "player";
+
+                  return (
+                    <div key={message.id} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        {getSenderBadge(message.sender, message.senderName)}
+                        <span className="text-xs text-muted-foreground">{message.timestamp}</span>
+                      </div>
+                      <div className={`p-3 rounded-lg ${
+                        isPlayer
+                          ? "bg-primary/10 border-l-4 border-primary ml-4"
+                          : "bg-muted/50"
+                      }`}>
+                        <p className="text-sm text-foreground whitespace-pre-line">{text}</p>
+
+                        {/* Render clickable options for DM/NPC messages */}
+                        {!isPlayer && options.length > 0 && (
+                          <div className="mt-4 space-y-2">
+                            <p className="text-sm font-semibold text-foreground">What do you do?</p>
+                            {options.map((option, index) => (
+                              <Button
+                                key={index}
+                                variant="outline"
+                                size="sm"
+                                className="w-full justify-start text-left h-auto py-2 px-3"
+                                onClick={() => onSendMessage?.(option)}
+                                disabled={isLoading}
+                              >
+                                <span className="text-sm">{option}</span>
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className={`p-3 rounded-lg ${
-                      message.sender === "player"
-                        ? "bg-primary/10 border-l-4 border-primary ml-4"
-                        : "bg-muted/50"
-                    }`}>
-                      <p className="text-sm text-foreground">{message.content}</p>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
 
               {/* AI Thinking Indicator */}
@@ -116,29 +158,8 @@ export default function ChatInterface({
               )}
             </div>
           </ScrollArea>
-          
-          {/* Quick Actions */}
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-foreground">Quick Actions</div>
-            <div className="flex gap-2">
-              {quickActions.map((action) => (
-                <Button 
-                  key={action.action}
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleQuickAction(action.action)}
-                  disabled={isLoading}
-                  className="flex-1"
-                  data-testid={`quick-action-${action.action}`}
-                >
-                  {action.icon}
-                  {action.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-          
-          {/* Voice Input */}
+
+          {/* Text Input */}
           <div className="flex items-center gap-2">
             <Button
               size="icon"

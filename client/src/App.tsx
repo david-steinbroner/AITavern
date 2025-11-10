@@ -128,23 +128,6 @@ function GameApp() {
     },
   });
   
-  // Quick action mutation
-  const quickActionMutation = useMutation({
-    mutationFn: async (action: string) => {
-      const response = await apiRequest('POST', '/api/ai/quick-action', { action });
-      return response.json();
-    },
-    onSuccess: () => {
-      // Refetch all data after quick action
-      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/character'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/quests'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/items'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/game-state'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/enemies'] });
-    },
-  });
-  
   // Combat action mutation
   const combatActionMutation = useMutation({
     mutationFn: async ({ action, targetId, spellId, itemId }: {
@@ -173,11 +156,7 @@ function GameApp() {
   const handleSendMessage = (content: string) => {
     aiChatMutation.mutate(content);
   };
-  
-  const handleQuickAction = (action: string) => {
-    quickActionMutation.mutate(action);
-  };
-  
+
   const handleToggleListening = () => {
     setIsListening(!isListening);
     // Simulate speech recognition for demo
@@ -227,7 +206,28 @@ function GameApp() {
   const handleQuestAction = (quest: Quest) => {
     console.log('Quest selected:', quest.title);
   };
-  
+
+  const handleEndAdventure = async () => {
+    try {
+      // Reset the game state on the backend
+      await apiRequest('POST', '/api/adventure/reset', {});
+
+      // Invalidate all queries to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['/api/game-state'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/quests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/character'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/items'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/enemies'] });
+
+      // Return to start menu
+      setCurrentView("startMenu");
+      analytics.trackEvent("adventure_ended");
+    } catch (error) {
+      console.error('Failed to end adventure:', error);
+    }
+  };
+
   // Active quest count for navigation badge
   const activeQuestCount = quests.filter(q => q.status === 'active').length;
   
@@ -314,13 +314,13 @@ function GameApp() {
           );
         }
         return (
-          <ChatInterface 
+          <ChatInterface
             messages={messages}
             onSendMessage={handleSendMessage}
-            onQuickAction={handleQuickAction}
             isListening={isListening}
             onToggleListening={handleToggleListening}
-            isLoading={aiChatMutation.isPending || quickActionMutation.isPending}
+            isLoading={aiChatMutation.isPending}
+            onEndAdventure={handleEndAdventure}
             className="pb-20"
           />
         );
@@ -351,11 +351,12 @@ function GameApp() {
 
   if (currentView === "startMenu") {
     return (
-      <StartMenu 
+      <StartMenu
         onStartGame={() => setCurrentView("game")}
         onShowGuide={() => setCurrentView("userGuide")}
         onCreateCharacter={() => setCurrentView("characterCreation")}
         onShowAdventureTemplates={() => setCurrentView("adventureTemplates")}
+        onEndAdventure={handleEndAdventure}
       />
     );
   }

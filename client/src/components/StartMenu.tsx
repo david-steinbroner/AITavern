@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, HelpCircle, Sword, Scroll, UserPlus, Map } from "lucide-react";
+import { Play, HelpCircle, Sword, Scroll, UserPlus, Map, XCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Character } from "@shared/schema";
 
@@ -10,6 +10,7 @@ interface StartMenuProps {
   onCreateCharacter: () => void;
   onShowAdventureTemplates: () => void;
   onShowSettings?: () => void;
+  onEndAdventure?: () => void;
 }
 
 export default function StartMenu({
@@ -17,6 +18,7 @@ export default function StartMenu({
   onShowGuide,
   onCreateCharacter,
   onShowAdventureTemplates,
+  onEndAdventure,
 }: StartMenuProps) {
   // Check if user has an active character/game
   const { data: character } = useQuery<Character>({
@@ -46,15 +48,28 @@ export default function StartMenu({
         {/* Primary CTA - Continue Adventure (only if has active game) */}
         {hasActiveGame && (
           <Card className="p-6 hover-elevate border-primary/30 bg-primary/5">
-            <Button
-              onClick={onStartGame}
-              size="lg"
-              className="w-full text-lg font-semibold h-14"
-              data-testid="button-start-game"
-            >
-              <Play className="w-5 h-5 mr-2" />
-              Continue Adventure
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                onClick={onStartGame}
+                size="lg"
+                className="flex-1 text-lg font-semibold h-14"
+                data-testid="button-start-game"
+              >
+                <Play className="w-5 h-5 mr-2" />
+                Continue Adventure
+              </Button>
+              {onEndAdventure && (
+                <Button
+                  onClick={onEndAdventure}
+                  variant="destructive"
+                  size="lg"
+                  className="h-14"
+                  data-testid="button-end-adventure"
+                >
+                  <XCircle className="w-5 h-5" />
+                </Button>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground mt-3 text-center">
               Resume your current quest and continue your journey
             </p>

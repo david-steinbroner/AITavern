@@ -115,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Adventure template initialization
+  // Adventure management
   const adventureTemplateSchema = z.object({
     id: z.string(),
     name: z.string(),
@@ -127,6 +127,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       priority: z.enum(["high", "normal", "low"]),
       maxProgress: z.number()
     })
+  });
+
+  app.post("/api/adventure/reset", async (req, res) => {
+    try {
+      // Clear all game data
+      await storage.clearMessages();
+
+      // Reset game state to initial state
+      await storage.updateGameState({
+        currentScene: "A new adventure awaits...",
+        inCombat: false,
+        currentTurn: null,
+        turnCount: 0,
+        combatId: null
+      });
+
+      // Re-initialize with welcome message
+      await storage.init();
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error resetting adventure:', error);
+      res.status(500).json({ error: 'Failed to reset adventure' });
+    }
   });
 
   app.post("/api/adventure/initialize", async (req, res) => {
