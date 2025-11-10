@@ -30,15 +30,15 @@ export default function WelcomeScreen({
         <div className="text-center space-y-3 sm:space-y-4">
           <div className="flex justify-center">
             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-primary/10 rounded-full flex items-center justify-center">
-              <Crown className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
+              <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
             </div>
           </div>
           <div>
-            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-foreground mb-2">
-              Welcome, Adventurer!
+            <h1 className="font-bold text-3xl sm:text-4xl text-foreground mb-2">
+              STORY MODE
             </h1>
             <p className="text-sm sm:text-base text-muted-foreground px-2 sm:px-0">
-              Your AI-powered tabletop adventure awaits. Create epic stories with your intelligent Dungeon Master.
+              Create unlimited interactive stories. Any genre, any setting. Your story, your rules.
             </p>
           </div>
         </div>
@@ -54,7 +54,7 @@ export default function WelcomeScreen({
           <CardContent className="space-y-3 sm:space-y-4">
             <div className="space-y-3">
               <Button
-                className="w-full h-auto py-4 px-4 justify-start text-left flex items-center gap-3"
+                className="w-full h-auto py-4 px-4 justify-start text-left flex items-center gap-3 rounded-3xl"
                 onClick={onStartDemo}
                 data-testid="button-start-demo"
               >
@@ -62,18 +62,18 @@ export default function WelcomeScreen({
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="font-semibold text-base">Take the Interactive Tour</div>
                   <div className="text-sm text-primary-foreground/80">
-                    Learn by doing! We'll guide you through your first adventure step by step.
+                    Learn by doing! We'll guide you through your first story step by step.
                   </div>
                   <div className="flex flex-wrap gap-2 mt-1">
-                    <Badge variant="secondary" className="text-xs">Recommended</Badge>
-                    <Badge variant="outline" className="text-xs border-primary-foreground/20">5 min</Badge>
+                    <Badge variant="secondary" className="text-xs rounded-full">Recommended</Badge>
+                    <Badge variant="outline" className="text-xs border-primary-foreground/20 rounded-full">5 min</Badge>
                   </div>
                 </div>
               </Button>
 
               <Button
                 variant="outline"
-                className="w-full h-auto py-4 px-4 justify-start text-left flex items-center gap-3"
+                className="w-full h-auto py-4 px-4 justify-start text-left flex items-center gap-3 rounded-3xl"
                 onClick={onSkipDemo}
                 data-testid="button-skip-demo"
               >
@@ -81,7 +81,7 @@ export default function WelcomeScreen({
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="font-semibold text-base">Skip Tutorial</div>
                   <div className="text-sm text-muted-foreground">
-                    I'm familiar with RPGs and want to jump right in.
+                    I'm ready to start creating my own stories.
                   </div>
                 </div>
               </Button>
@@ -95,16 +95,16 @@ export default function WelcomeScreen({
             <div className="text-center space-y-3">
               <div className="flex items-center justify-center gap-2">
                 <Star className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-muted-foreground">Returning Player?</span>
+                <span className="text-sm font-medium text-muted-foreground">Been here before?</span>
               </div>
               <Button
                 variant="ghost"
                 onClick={onEnterGame}
-                className="text-sm"
+                className="text-sm rounded-full"
                 data-testid="button-enter-game"
               >
-                <Sword className="w-4 h-4 mr-2" />
-                Continue Your Adventure
+                <Sparkles className="w-4 h-4 mr-2" />
+                Continue Your Story
               </Button>
             </div>
           </CardContent>

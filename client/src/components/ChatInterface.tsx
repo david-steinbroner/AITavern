@@ -75,11 +75,11 @@ export default function ChatInterface({
   const getSenderBadge = (sender: string, senderName?: string | null) => {
     switch (sender) {
       case "dm":
-        return <Badge variant="secondary">DM</Badge>;
+        return <Badge variant="secondary" className="rounded-full">Narrator</Badge>;
       case "npc":
-        return <Badge variant="secondary">{senderName || "NPC"}</Badge>;
+        return <Badge variant="secondary" className="rounded-full">{senderName || "Character"}</Badge>;
       default:
-        return <Badge variant="outline">You</Badge>;
+        return <Badge variant="outline" className="rounded-full">You</Badge>;
     }
   };
   
@@ -87,10 +87,10 @@ export default function ChatInterface({
     <div className={`h-full flex flex-col ${className}`} data-testid="chat-interface">
       <Card className="flex-1 flex flex-col">
         <PageHeader
-          title="Adventure Chat"
-          subtitle="Speak with the DM and NPCs"
+          title="Your Story"
+          subtitle="Chat with your narrator and characters"
           action={{
-            label: "End Adventure",
+            label: "End Story",
             onClick: onEndAdventure || (() => {}),
             icon: XCircle,
             variant: "destructive"
@@ -153,7 +153,7 @@ export default function ChatInterface({
               {isLoading && (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 animate-pulse">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <p className="text-sm text-muted-foreground">The DM is thinking...</p>
+                  <p className="text-sm text-muted-foreground">Your narrator is thinking...</p>
                 </div>
               )}
             </div>

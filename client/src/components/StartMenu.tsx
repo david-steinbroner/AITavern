@@ -85,15 +85,14 @@ export default function StartMenu({
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 py-6">
       {/* Hero Section */}
       <div className="text-center mb-6">
-        <div className="mb-3 relative h-12">
-          <Sword className="w-12 h-12 mx-auto text-primary absolute left-1/2 -translate-x-1/2 top-0" />
-          <Scroll className="w-8 h-8 mx-auto text-accent absolute left-1/2 -translate-x-1/2 top-0 translate-x-4 translate-y-2" />
+        <div className="mb-3">
+          <Sparkles className="w-12 h-12 mx-auto text-primary" />
         </div>
-        <h1 className="font-serif text-3xl text-primary mb-2" data-testid="game-title">
-          AI Dungeon Master
+        <h1 className="font-bold text-4xl text-foreground mb-2" data-testid="game-title">
+          STORY MODE
         </h1>
         <p className="text-muted-foreground text-base max-w-md mx-auto">
-          Embark on epic adventures powered by artificial intelligence. Your story awaits.
+          Your story, your rules. Create unlimited adventures. Any genre you can imagine.
         </p>
       </div>
 
