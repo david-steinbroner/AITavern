@@ -252,8 +252,43 @@ Example Quest Actions:
         response_format: { type: "json_object" },
       });
 
-      const aiResponse = JSON.parse(response.choices[0].message.content || '{}');
-      
+      let aiResponse;
+      try {
+        const rawContent = response.choices[0].message.content || '{}';
+        // Try to parse the JSON, which may contain control characters
+        aiResponse = JSON.parse(rawContent);
+      } catch (parseError: any) {
+        // If JSON parsing fails due to control characters, try to fix it
+        console.error('JSON parse error, attempting to sanitize:', parseError.message);
+        const rawContent = response.choices[0].message.content || '{}';
+
+        // Remove or escape control characters that break JSON parsing
+        // but preserve intended newlines in the content
+        const sanitized = rawContent
+          .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // Remove control chars except \n, \r, \t
+          .replace(/\n/g, '\\n')  // Escape newlines
+          .replace(/\r/g, '\\r')  // Escape carriage returns
+          .replace(/\t/g, '\\t'); // Escape tabs
+
+        try {
+          aiResponse = JSON.parse(sanitized);
+        } catch (secondError) {
+          // If still failing, return a fallback response
+          console.error('Failed to parse AI response even after sanitization:', secondError);
+          captureError(new Error(`JSON parse failed: ${parseError.message}`), {
+            context: "AI response parsing",
+            rawContent: rawContent.substring(0, 500) // Only log first 500 chars
+          });
+
+          return {
+            content: "The DM pauses, considering your words... (There was an issue with the mystical connection. Please try again.)",
+            sender: 'dm',
+            senderName: null,
+            actions: undefined
+          };
+        }
+      }
+
       // Validate and sanitize the response
       return {
         content: aiResponse.content || "The DM pauses, considering your words...",
