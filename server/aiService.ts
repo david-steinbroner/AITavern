@@ -3,7 +3,7 @@ import { storage } from "./storage";
 import type { Character, Quest, Item, Message, Enemy, GameState } from "@shared/schema";
 
   const openai = new OpenAI({
-    apiKey: process.env.OPENROUTER_API_KEY,
+    apiKey: process.env.OPENROUTER_API_KEY || "sk-placeholder",
     baseURL: "https://openrouter.ai/api/v1",
     defaultHeaders: {
       "HTTP-Referer": "https://aitavern.onrender.com", // Your site URL
@@ -160,6 +160,10 @@ Remember to respond as the character or DM that makes most sense for the context
 
   async generateResponse(playerMessage: string): Promise<AIResponse> {
     try {
+      // Validate API key exists
+      if (!process.env.OPENROUTER_API_KEY) {
+        throw new Error("OPENROUTER_API_KEY environment variable is not set");
+      }
       // Get current game context
       const context = await this.getGameContext();
       const contextPrompt = this.createContextPrompt(context);
