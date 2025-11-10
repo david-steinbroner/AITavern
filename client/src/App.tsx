@@ -21,6 +21,7 @@ import ThemeToggle from "./components/ThemeToggle";
 import CharacterCreation from "./components/CharacterCreation";
 import AdventureTemplates from "./components/AdventureTemplates";
 import { useTooltips } from "./hooks/useTooltips";
+import { useAnalytics, useSessionTracking } from "./hooks/useAnalytics";
 import { useNotifications } from "./hooks/useNotifications";
 
 // Types
@@ -50,7 +51,18 @@ function GameApp() {
   // Notification system for badges
   const { hasNotification, markTabAsVisited, addNotification } = useNotifications();
 
+
+  // Analytics and session tracking
+  const analytics = useAnalytics();
+  useSessionTracking();
   // Check if we should show welcome screen for returning users
+
+  // Track tab changes
+  useEffect(() => {
+    if (currentView === "game") {
+      analytics.trackEvent("tab_view", { tab: activeTab });
+    }
+  }, [activeTab, currentView, analytics]);
   useEffect(() => {
     const isNewUser = !demoCompleted && seenTooltips.size === 0;
     
@@ -100,11 +112,18 @@ function GameApp() {
   const aiChatMutation = useMutation({
     mutationFn: async (message: string) => {
       const response = await apiRequest('POST', '/api/ai/chat', { message });
+      const startTime = Date.now();
       return response.json();
     },
     onSuccess: () => {
       // Refetch all data after AI response
+      const responseTime = Date.now() - startTime;
+      analytics.messageSent("chat");
+      analytics.aiResponseReceived(responseTime);
       queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      const responseTime = Date.now() - startTime;
+      analytics.messageSent("chat");
+      analytics.aiResponseReceived(responseTime);
       queryClient.invalidateQueries({ queryKey: ['/api/character'] });
       queryClient.invalidateQueries({ queryKey: ['/api/quests'] });
       queryClient.invalidateQueries({ queryKey: ['/api/items'] });
