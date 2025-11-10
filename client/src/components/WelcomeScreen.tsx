@@ -54,22 +54,22 @@ export default function WelcomeScreen({
           <CardContent className="space-y-3 sm:space-y-4">
             <div className="space-y-3">
               <Button
-                className="w-full h-auto p-3 sm:p-4 justify-start"
+                className="w-full h-auto p-4 justify-start items-start text-left"
                 onClick={onStartDemo}
                 data-testid="button-start-demo"
               >
-                <div className="flex items-start gap-2 sm:gap-3 text-left">
-                  <div className="mt-0.5 sm:mt-1">
-                    <Play className="w-4 h-4 sm:w-5 sm:h-5" />
+                <div className="flex items-start gap-3 w-full">
+                  <div className="mt-1 shrink-0">
+                    <Play className="w-5 h-5" />
                   </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-sm sm:text-base">Take the Interactive Tour</div>
-                    <div className="text-xs sm:text-sm text-muted-foreground">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="font-semibold text-base">Take the Interactive Tour</div>
+                    <div className="text-sm text-primary-foreground/80 leading-relaxed">
                       Learn by doing! We'll guide you through your first adventure step by step.
                     </div>
-                    <div className="flex gap-1 mt-1.5 sm:mt-2">
+                    <div className="flex flex-wrap gap-2 mt-2">
                       <Badge variant="secondary" className="text-xs">Recommended</Badge>
-                      <Badge variant="outline" className="text-xs">5 min</Badge>
+                      <Badge variant="outline" className="text-xs border-primary-foreground/20">5 min</Badge>
                     </div>
                   </div>
                 </div>
@@ -77,17 +77,17 @@ export default function WelcomeScreen({
 
               <Button
                 variant="outline"
-                className="w-full h-auto p-3 sm:p-4 justify-start"
+                className="w-full h-auto p-4 justify-start items-start text-left"
                 onClick={onSkipDemo}
                 data-testid="button-skip-demo"
               >
-                <div className="flex items-start gap-2 sm:gap-3 text-left">
-                  <div className="mt-0.5 sm:mt-1">
-                    <SkipForward className="w-4 h-4 sm:w-5 sm:h-5" />
+                <div className="flex items-start gap-3 w-full">
+                  <div className="mt-1 shrink-0">
+                    <SkipForward className="w-5 h-5" />
                   </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-sm sm:text-base">Skip Tutorial</div>
-                    <div className="text-xs sm:text-sm text-muted-foreground">
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="font-semibold text-base">Skip Tutorial</div>
+                    <div className="text-sm text-muted-foreground leading-relaxed">
                       I'm familiar with RPGs and want to jump right in.
                     </div>
                   </div>
