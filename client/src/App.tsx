@@ -718,7 +718,7 @@ function GameApp() {
       </div>
 
       {/* Main Content - Flexible height, accounts for header + nav */}
-      <main className="flex-1 overflow-auto px-3 sm:px-4 py-3 sm:py-4 pb-16">
+      <main className="flex-1 overflow-auto px-3 sm:px-4 py-3 sm:py-4 pb-20">
         <div className="h-full">
           {getPageContent()}
         </div>
