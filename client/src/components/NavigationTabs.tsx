@@ -46,14 +46,14 @@ export default function NavigationTabs({
 
   const tabs = [
     {
-      id: "character" as TabType,
-      label: "Character",
-      icon: <User className="w-5 h-5" />,
-      badge: null,
+      id: "chat" as TabType,
+      label: "Chat",
+      icon: <MessageSquare className="w-5 h-5" />,
+      badge: unreadMessages > 0 ? unreadMessages : null,
       tooltip: {
-        id: 'nav-character',
-        title: 'Character Sheet',
-        content: 'View your stats, health, mana, and level progression. This is where you can see how strong your adventurer has become!'
+        id: 'nav-chat',
+        title: 'Adventure Chat',
+        content: 'Talk with your AI Dungeon Master! Describe what you want to do and the DM will guide your story.'
       }
     },
     {
@@ -68,6 +68,17 @@ export default function NavigationTabs({
       }
     },
     {
+      id: "character" as TabType,
+      label: "Character",
+      icon: <User className="w-5 h-5" />,
+      badge: null,
+      tooltip: {
+        id: 'nav-character',
+        title: 'Character Sheet',
+        content: 'View your stats, health, mana, and level progression. This is where you can see how strong your adventurer has become!'
+      }
+    },
+    {
       id: "inventory" as TabType,
       label: "Inventory",
       icon: <Package className="w-5 h-5" />,
@@ -76,17 +87,6 @@ export default function NavigationTabs({
         id: 'nav-inventory',
         title: 'Inventory',
         content: 'Manage your weapons, armor, and items. Equip better gear to improve your combat abilities!'
-      }
-    },
-    {
-      id: "chat" as TabType,
-      label: "Chat",
-      icon: <MessageSquare className="w-5 h-5" />,
-      badge: unreadMessages > 0 ? unreadMessages : null,
-      tooltip: {
-        id: 'nav-chat',
-        title: 'Adventure Chat',
-        content: 'Talk with your AI Dungeon Master! Describe what you want to do and the DM will guide your story.'
       }
     }
   ];

@@ -663,7 +663,9 @@ function GameApp() {
             queryClient.invalidateQueries({ queryKey: ['/api/game-state'] });
             queryClient.invalidateQueries({ queryKey: ['/api/quests'] });
             queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
-            
+            queryClient.invalidateQueries({ queryKey: ['/api/character'] });
+
+            setActiveTab("chat");
             setCurrentView("game");
           } catch (error) {
             console.error('Failed to initialize adventure:', error);
