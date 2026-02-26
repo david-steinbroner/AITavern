@@ -611,9 +611,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(429).json({ error: spendCheck.reason });
       }
 
-      // Track successful AI request
-      spendTracker.trackRequest();
+      // Generate AI response
       const aiResponse = await aiService.generateResponse(sessionId, actionMessage);
+
+      // Track request with actual token usage
+      spendTracker.trackRequest(sessionId, aiResponse.tokenUsage);
 
       // Store messages
       await storage.createMessage({
@@ -1027,8 +1029,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate AI response
       const aiResponse = await aiService.generateResponse(sessionId, message);
 
-      // Track successful AI request
-      spendTracker.trackRequest();
+      // Track request with actual token usage
+      spendTracker.trackRequest(sessionId, aiResponse.tokenUsage);
 
       // Apply AI response (store messages, apply actions, detect side quests)
       const aiMessage = await applyAIResponse(sessionId, message, aiResponse);
@@ -1083,11 +1085,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(429).json({ error: spendCheck.reason });
       }
 
-      // Track successful AI request
-      spendTracker.trackRequest();
-
       // Process the quick action as a regular chat message
       const aiResponse = await aiService.generateResponse(sessionId, actionMessage);
+
+      // Track request with actual token usage
+      spendTracker.trackRequest(sessionId, aiResponse.tokenUsage);
 
       // Apply AI response (store messages, apply actions, detect side quests)
       const aiMessage = await applyAIResponse(sessionId, actionMessage, aiResponse);
@@ -1191,6 +1193,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error resetting rounds:', error);
       res.status(500).json({ error: "Failed to reset rounds" });
+    }
+  });
+
+  // ============================================
+  // Admin API endpoints (protected by ADMIN_KEY)
+  // ============================================
+
+  const adminAuth = (req: Request, res: any, next: any) => {
+    const adminKey = req.headers['x-admin-key'] as string;
+    const expectedKey = process.env.ADMIN_KEY;
+
+    if (!expectedKey) {
+      console.warn('[Admin] ADMIN_KEY not configured in environment');
+      return res.status(503).json({ error: 'Admin API not configured' });
+    }
+
+    if (!adminKey || adminKey !== expectedKey) {
+      return res.status(401).json({ error: 'Invalid admin key' });
+    }
+
+    next();
+  };
+
+  // GET /api/admin/spend - Return spend metrics
+  app.get("/api/admin/spend", adminAuth, async (_req, res) => {
+    try {
+      const stats = spendTracker.getAdminStats();
+      res.json({
+        todaysCost: stats.today.totalCost,
+        allTimeCost: stats.allTime.totalCost,
+        requestsToday: stats.today.requestCount,
+        requestsAllTime: stats.allTime.requestCount,
+        averageCostPerRequest: stats.averageCostPerRequest,
+        dailyBudgetRemaining: stats.remainingBudget,
+        dailyLimit: stats.dailyLimit,
+        todaysTokens: {
+          prompt: stats.today.totalPromptTokens,
+          completion: stats.today.totalCompletionTokens,
+        },
+        allTimeTokens: {
+          prompt: stats.allTime.totalPromptTokens,
+          completion: stats.allTime.totalCompletionTokens,
+        },
+      });
+    } catch (error) {
+      console.error('Error fetching admin spend stats:', error);
+      res.status(500).json({ error: 'Failed to fetch spend stats' });
+    }
+  });
+
+  // GET /api/admin/sessions - Return session usage data
+  app.get("/api/admin/sessions", adminAuth, async (_req, res) => {
+    try {
+      const sessions = spendTracker.getSessionStats();
+      res.json({
+        sessions: sessions.sort((a, b) => b.totalCost - a.totalCost), // Sort by cost descending
+        totalSessions: sessions.length,
+      });
+    } catch (error) {
+      console.error('Error fetching admin session stats:', error);
+      res.status(500).json({ error: 'Failed to fetch session stats' });
     }
   });
 

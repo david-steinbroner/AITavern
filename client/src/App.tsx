@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from "react";
 
 // Components
 import NavigationTabs from "./components/NavigationTabs";
+import AdminDashboard from "./components/AdminDashboard";
 import CharacterSheet from "./components/CharacterSheet";
 import QuestLog from "./components/QuestLog";
 import Inventory from "./components/Inventory";
@@ -781,6 +782,13 @@ function GameApp() {
 }
 
 function App() {
+  // Check if we're on the admin route
+  const isAdminRoute = window.location.pathname === "/admin";
+
+  if (isAdminRoute) {
+    return <AdminDashboard />;
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

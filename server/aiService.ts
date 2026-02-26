@@ -12,11 +12,18 @@ import { captureError } from "./sentry";
     }
   });
 
+export interface TokenUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
 export interface AIResponse {
   content: string;
   sender: 'dm' | 'npc';
   senderName: string | null;
   error?: 'parse_failure' | 'api_error' | 'network_error'; // Error flag for tracking
+  tokenUsage?: TokenUsage;
   actions?: {
     updateQuest?: { id: string; updates: Partial<Quest> };
     createQuest?: Omit<Quest, 'id'>;
@@ -356,12 +363,20 @@ Example Quest Actions:
       });
 
       const apiDuration = Date.now() - startTime;
+
+      // Capture token usage from API response
+      const tokenUsage: TokenUsage | undefined = response.usage ? {
+        promptTokens: response.usage.prompt_tokens || 0,
+        completionTokens: response.usage.completion_tokens || 0,
+        totalTokens: response.usage.total_tokens || 0,
+      } : undefined;
+
       console.log('[AI Service] API response received', {
         durationMs: apiDuration,
         hasChoices: !!response.choices,
         choicesLength: response.choices?.length || 0,
         finishReason: response.choices?.[0]?.finish_reason,
-        usage: response.usage
+        tokenUsage
       });
 
       // Validate response structure
@@ -475,6 +490,7 @@ Example Quest Actions:
         content: aiResponse.content || "The DM pauses, considering your words...",
         sender: aiResponse.sender === 'npc' ? 'npc' as const : 'dm' as const,
         senderName: aiResponse.sender === 'npc' ? aiResponse.senderName : null,
+        tokenUsage,
         actions: aiResponse.actions || undefined
       };
 
