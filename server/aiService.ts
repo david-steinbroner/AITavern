@@ -1,14 +1,19 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
-import type { Character, Quest, Item, Message, Enemy, GameState } from "@shared/schema";
+import type { Character, Quest, Item, Message, Enemy, GameState, StorySummary } from "@shared/schema";
 import { captureError } from "./sentry";
+import { generateStorySummary } from "./summaryService";
+
+// Constants for rolling story summary
+const SUMMARY_THRESHOLD = 10; // Trigger summarization when this many unsummarized messages exist
+const RECENT_MESSAGE_WINDOW = 5; // Always keep this many recent messages verbatim
 
   const openai = new OpenAI({
     apiKey: process.env.OPENROUTER_API_KEY || "sk-placeholder",
     baseURL: "https://openrouter.ai/api/v1",
     defaultHeaders: {
-      "HTTP-Referer": "https://aitavern.onrender.com", // Your site URL
-      "X-Title": "AI Tavern", // Your app name
+      "HTTP-Referer": "https://storymode.onrender.com",
+      "X-Title": "Story Mode",
     }
   });
 
@@ -131,16 +136,18 @@ Remember: Keep responses engaging but focused. Always give players clear options
     items: Item[];
     recentMessages: Message[];
     gameState: GameState | undefined;
+    storySummary: StorySummary | null;
   }> {
-    const [character, quests, items, recentMessages, gameState] = await Promise.all([
+    const [character, quests, items, recentMessages, gameState, storySummary] = await Promise.all([
       storage.getCharacter(sessionId),
       storage.getQuests(sessionId),
       storage.getItems(sessionId),
       storage.getRecentMessages(sessionId, 10),
       storage.getGameState(sessionId),
+      storage.getActiveSummary(sessionId),
     ]);
 
-    return { character, quests, items, recentMessages, gameState };
+    return { character, quests, items, recentMessages, gameState, storySummary };
   }
 
   private createContextPrompt(
@@ -150,9 +157,10 @@ Remember: Keep responses engaging but focused. Always give players clear options
       items: Item[];
       recentMessages: Message[];
       gameState: GameState | undefined;
+      storySummary: StorySummary | null;
     }
   ): string {
-    const { character, quests, items, recentMessages, gameState } = context;
+    const { character, quests, items, recentMessages, gameState, storySummary } = context;
 
     let prompt = "CURRENT GAME STATE:\\n\\n";
 
@@ -221,6 +229,12 @@ Remember: Keep responses engaging but focused. Always give players clear options
       prompt += "\\n";
     }
 
+    // Story summary (rolling context from earlier in the adventure)
+    if (storySummary) {
+      prompt += "STORY SO FAR:\\n";
+      prompt += `${storySummary.summaryText}\\n\\n`;
+    }
+
     // Recent conversation for context
     if (recentMessages.length > 0) {
       prompt += "RECENT CONVERSATION:\\n";
@@ -237,6 +251,104 @@ Remember: Keep responses engaging but focused. Always give players clear options
     }
 
     return prompt;
+  }
+
+  /**
+   * Check if summarization is needed and trigger it if so.
+   * This is non-blocking - if summarization fails, we log the error but don't stop the response.
+   */
+  private async checkAndTriggerSummarization(sessionId: string): Promise<void> {
+    try {
+      // Get all messages and current summary
+      const [allMessages, currentSummary] = await Promise.all([
+        storage.getMessages(sessionId),
+        storage.getActiveSummary(sessionId),
+      ]);
+
+      const totalMessages = allMessages.length;
+
+      // Calculate how many messages are unsummarized
+      let unsummarizedCount: number;
+      if (!currentSummary) {
+        // No summary yet - all messages except the recent window are unsummarized
+        unsummarizedCount = totalMessages - RECENT_MESSAGE_WINDOW;
+      } else {
+        // Summary exists - count messages after the summary's end index
+        unsummarizedCount = totalMessages - currentSummary.messageEndIndex - RECENT_MESSAGE_WINDOW;
+      }
+
+      // Only summarize if we have enough unsummarized messages
+      if (unsummarizedCount < SUMMARY_THRESHOLD) {
+        console.log('[AI Service] Summarization not needed', {
+          totalMessages,
+          unsummarizedCount,
+          threshold: SUMMARY_THRESHOLD,
+        });
+        return;
+      }
+
+      console.log('[AI Service] Triggering summarization', {
+        totalMessages,
+        unsummarizedCount,
+        threshold: SUMMARY_THRESHOLD,
+        hasPreviousSummary: !!currentSummary,
+      });
+
+      // Get messages to summarize (everything from start through totalMessages - RECENT_WINDOW)
+      const messagesToSummarizeEnd = totalMessages - RECENT_MESSAGE_WINDOW;
+      const messagesToSummarize = allMessages.slice(0, messagesToSummarizeEnd);
+
+      if (messagesToSummarize.length === 0) {
+        console.log('[AI Service] No messages to summarize after calculation');
+        return;
+      }
+
+      // Get previous summary text if it exists
+      const previousSummaryText = currentSummary?.summaryText;
+
+      // Generate the new summary
+      const summaryResult = await generateStorySummary(
+        sessionId,
+        messagesToSummarize,
+        previousSummaryText
+      );
+
+      if (summaryResult.error || !summaryResult.summaryText) {
+        console.error('[AI Service] Summarization failed', { error: summaryResult.error });
+        // Don't throw - just log and continue without summary
+        return;
+      }
+
+      // Deactivate old summaries and save the new one
+      await storage.deactivateSummaries(sessionId);
+      await storage.createSummary(sessionId, {
+        sessionId,
+        summaryText: summaryResult.summaryText,
+        messageStartIndex: 0,
+        messageEndIndex: messagesToSummarizeEnd,
+        messageCount: messagesToSummarize.length,
+        summaryTokenCount: summaryResult.tokenUsage?.totalTokens || null,
+        createdAt: new Date().toISOString(),
+        isActive: true,
+      });
+
+      console.log('[AI Service] Summary created successfully', {
+        messagesCovered: messagesToSummarize.length,
+        summaryLength: summaryResult.summaryText.length,
+        tokenCount: summaryResult.tokenUsage?.totalTokens,
+      });
+
+    } catch (error: any) {
+      // Non-blocking - log but don't throw
+      console.error('[AI Service] Summarization check failed (non-blocking)', {
+        error: error.message,
+        sessionId,
+      });
+      captureError(error as Error, {
+        context: "Summarization trigger - non-blocking failure",
+        sessionId,
+      });
+    }
   }
 
   async generateResponse(sessionId: string, playerMessage: string): Promise<AIResponse> {
@@ -256,6 +368,12 @@ Remember: Keep responses engaging but focused. Always give players clear options
         throw error;
       }
 
+      // Check if summarization is needed (fire-and-forget - runs in background)
+      // The new summary won't be available for THIS response, but will be ready for the NEXT one
+      this.checkAndTriggerSummarization(sessionId).catch((err) => {
+        console.error('[AI Service] Background summarization error', { error: err.message });
+      });
+
       // Get current game context
       console.log('[AI Service] Fetching game context');
       const context = await this.getGameContext(sessionId);
@@ -263,7 +381,8 @@ Remember: Keep responses engaging but focused. Always give players clear options
         hasCharacter: !!context.character,
         questCount: context.quests.length,
         itemCount: context.items.length,
-        messageCount: context.recentMessages.length
+        messageCount: context.recentMessages.length,
+        hasSummary: !!context.storySummary,
       });
 
       // Log recent message chain for debugging conversation flow

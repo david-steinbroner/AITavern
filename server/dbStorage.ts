@@ -18,11 +18,14 @@ import {
   type InsertGameState,
   type Campaign,
   type InsertCampaign,
+  type StorySummary,
+  type InsertStorySummary,
   characters,
   quests,
   items,
   messages,
   gameState,
+  storySummaries,
 } from "@shared/schema";
 
 /**
@@ -547,6 +550,56 @@ export class DbStorage implements IStorage {
   }
 
   // ============================================================
+  // STORY SUMMARY MANAGEMENT (AI Memory)
+  // ============================================================
+
+  async getActiveSummary(sessionId: string): Promise<StorySummary | null> {
+    try {
+      const result = await db
+        .select()
+        .from(storySummaries)
+        .where(
+          and(
+            eq(storySummaries.sessionId, sessionId),
+            eq(storySummaries.isActive, true)
+          )
+        )
+        .orderBy(desc(storySummaries.createdAt))
+        .limit(1);
+      return result[0] || null;
+    } catch (error) {
+      throw new Error(`Failed to get active summary: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+
+  async createSummary(sessionId: string, summary: InsertStorySummary): Promise<StorySummary> {
+    try {
+      const result = await db
+        .insert(storySummaries)
+        .values({
+          ...summary,
+          sessionId,
+          isActive: true,
+        })
+        .returning();
+      return result[0];
+    } catch (error) {
+      throw new Error(`Failed to create summary: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+
+  async deactivateSummaries(sessionId: string): Promise<void> {
+    try {
+      await db
+        .update(storySummaries)
+        .set({ isActive: false })
+        .where(eq(storySummaries.sessionId, sessionId));
+    } catch (error) {
+      throw new Error(`Failed to deactivate summaries: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+
+  // ============================================================
   // UTILITY
   // ============================================================
 
@@ -557,6 +610,7 @@ export class DbStorage implements IStorage {
       await db.delete(quests).where(eq(quests.sessionId, sessionId));
       await db.delete(items).where(eq(items.sessionId, sessionId));
       await db.delete(characters).where(eq(characters.sessionId, sessionId));
+      await db.delete(storySummaries).where(eq(storySummaries.sessionId, sessionId));
 
       // Reset game state
       const existingState = await this.getGameState(sessionId);

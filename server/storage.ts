@@ -14,7 +14,9 @@ import {
   type GameState,
   type InsertGameState,
   type Campaign,
-  type InsertCampaign
+  type InsertCampaign,
+  type StorySummary,
+  type InsertStorySummary
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { DbStorage } from "./dbStorage";
@@ -76,6 +78,11 @@ export interface IStorage {
   getGameState(sessionId: string): Promise<GameState | undefined>;
   createGameState(state: InsertGameState): Promise<GameState>;
   updateGameState(sessionId: string, updates: Partial<GameState>): Promise<GameState>;
+
+  // Story summary management (AI memory)
+  getActiveSummary(sessionId: string): Promise<StorySummary | null>;
+  createSummary(sessionId: string, summary: InsertStorySummary): Promise<StorySummary>;
+  deactivateSummaries(sessionId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -687,22 +694,35 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
   async setActiveCampaign(id: string): Promise<Campaign | null> {
     const campaign = this.campaigns.get(id);
     if (!campaign) return null;
-    
+
     // Deactivate all campaigns
     Array.from(this.campaigns.entries()).forEach(([campaignId, camp]) => {
       this.campaigns.set(campaignId, { ...camp, isActive: false });
     });
-    
+
     // Activate the selected campaign
-    const updatedCampaign = { 
-      ...campaign, 
-      isActive: true, 
-      lastPlayed: new Date().toISOString() 
+    const updatedCampaign = {
+      ...campaign,
+      isActive: true,
+      lastPlayed: new Date().toISOString()
     };
     this.campaigns.set(id, updatedCampaign);
     this.activeCampaignId = id;
-    
+
     return updatedCampaign;
+  }
+
+  // Story summary management (stub - MemStorage is backup only)
+  async getActiveSummary(sessionId: string): Promise<StorySummary | null> {
+    return null; // MemStorage doesn't track summaries
+  }
+
+  async createSummary(sessionId: string, summary: InsertStorySummary): Promise<StorySummary> {
+    throw new Error("MemStorage does not support story summaries — use DbStorage");
+  }
+
+  async deactivateSummaries(sessionId: string): Promise<void> {
+    // No-op for MemStorage
   }
 }
 

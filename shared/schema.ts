@@ -95,6 +95,29 @@ export const campaigns = pgTable("campaigns", {
   isActive: boolean("is_active").default(false).notNull(),
 });
 
+// Story Summary Schema (for AI memory / rolling context)
+export const storySummaries = pgTable("story_summaries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull(),
+
+  // The actual summary content
+  summaryText: text("summary_text").notNull(),
+
+  // What messages this summary covers (by index, not ID)
+  messageStartIndex: integer("message_start_index").notNull(),
+  messageEndIndex: integer("message_end_index").notNull(),
+  messageCount: integer("message_count").notNull(),
+
+  // Token tracking (for cost monitoring)
+  summaryTokenCount: integer("summary_token_count"),
+
+  // Timestamps
+  createdAt: text("created_at").notNull(),
+
+  // Status - old summaries kept with isActive=false for debugging
+  isActive: boolean("is_active").default(true).notNull(),
+});
+
 // Game State Schema (now linked to campaigns)
 export const gameState = pgTable("game_state", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -121,6 +144,7 @@ export const insertMessageSchema = createInsertSchema(messages);
 export const insertEnemySchema = createInsertSchema(enemies);
 export const insertGameStateSchema = createInsertSchema(gameState);
 export const insertCampaignSchema = createInsertSchema(campaigns);
+export const insertStorySummarySchema = createInsertSchema(storySummaries);
 
 // Update schemas for partial updates
 export const updateCharacterSchema = insertCharacterSchema.omit({ name: true, class: true }).partial();
@@ -138,6 +162,7 @@ export type Message = typeof messages.$inferSelect;
 export type Enemy = typeof enemies.$inferSelect;
 export type GameState = typeof gameState.$inferSelect;
 export type Campaign = typeof campaigns.$inferSelect;
+export type StorySummary = typeof storySummaries.$inferSelect;
 
 export type InsertCharacter = z.infer<typeof insertCharacterSchema>;
 export type InsertQuest = z.infer<typeof insertQuestSchema>;
@@ -146,6 +171,7 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type InsertEnemy = z.infer<typeof insertEnemySchema>;
 export type InsertGameState = z.infer<typeof insertGameStateSchema>;
 export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
+export type InsertStorySummary = z.infer<typeof insertStorySummarySchema>;
 
 // Legacy user schema for compatibility
 export const users = pgTable("users", {
