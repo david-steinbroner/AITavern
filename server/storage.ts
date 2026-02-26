@@ -24,44 +24,44 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   // Character management
-  getCharacter(): Promise<Character | undefined>;
+  init(sessionId: string): Promise<void>;
+  getCharacter(sessionId: string): Promise<Character | undefined>;
   createCharacter(character: InsertCharacter): Promise<Character>;
-  updateCharacter(id: string, updates: Partial<Character>): Promise<Character | null>;
-  init(): Promise<void>;
-  
+  updateCharacter(id: string, sessionId: string, updates: Partial<Character>): Promise<Character | null>;
+
   // Quest management
-  getQuests(): Promise<Quest[]>;
-  getQuest(id: string): Promise<Quest | undefined>;
+  getQuests(sessionId: string): Promise<Quest[]>;
+  getQuest(id: string, sessionId: string): Promise<Quest | undefined>;
   createQuest(quest: InsertQuest): Promise<Quest>;
-  updateQuest(id: string, updates: Partial<Quest>): Promise<Quest | null>;
-  deleteQuest(id: string): Promise<boolean>;
-  clearQuests(): Promise<void>;
+  updateQuest(id: string, sessionId: string, updates: Partial<Quest>): Promise<Quest | null>;
+  deleteQuest(id: string, sessionId: string): Promise<boolean>;
+  clearQuests(sessionId: string): Promise<void>;
 
   // Inventory management
-  getItems(): Promise<Item[]>;
-  getItem(id: string): Promise<Item | undefined>;
+  getItems(sessionId: string): Promise<Item[]>;
+  getItem(id: string, sessionId: string): Promise<Item | undefined>;
   createItem(item: InsertItem): Promise<Item>;
-  updateItem(id: string, updates: Partial<Item>): Promise<Item | null>;
-  deleteItem(id: string): Promise<boolean>;
-  
+  updateItem(id: string, sessionId: string, updates: Partial<Item>): Promise<Item | null>;
+  deleteItem(id: string, sessionId: string): Promise<boolean>;
+
   // Enemy management
   getEnemies(combatId?: string): Promise<Enemy[]>;
   getEnemy(id: string): Promise<Enemy | undefined>;
   createEnemy(enemy: InsertEnemy): Promise<Enemy>;
   updateEnemy(id: string, updates: Partial<Enemy>): Promise<Enemy | null>;
   deleteEnemy(id: string): Promise<boolean>;
-  
+
   // Message history for AI conversations
-  getMessages(): Promise<Message[]>;
-  getRecentMessages(limit: number): Promise<Message[]>;
+  getMessages(sessionId: string): Promise<Message[]>;
+  getRecentMessages(sessionId: string, limit: number): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
-  clearMessages(): Promise<void>;
+  clearMessages(sessionId: string): Promise<void>;
 
   // Clear all adventure data
-  clearAllAdventureData(): Promise<void>;
-  
+  clearAllAdventureData(sessionId: string): Promise<void>;
+
   // Campaign management
   getCampaigns(): Promise<Campaign[]>;
   getCampaign(id: string): Promise<Campaign | undefined>;
@@ -70,11 +70,11 @@ export interface IStorage {
   updateCampaign(id: string, updates: Partial<Campaign>): Promise<Campaign | null>;
   deleteCampaign(id: string): Promise<boolean>;
   setActiveCampaign(id: string): Promise<Campaign | null>;
-  
+
   // Game state management
-  getGameState(): Promise<GameState | undefined>;
+  getGameState(sessionId: string): Promise<GameState | undefined>;
   createGameState(state: InsertGameState): Promise<GameState>;
-  updateGameState(updates: Partial<GameState>): Promise<GameState>;
+  updateGameState(sessionId: string, updates: Partial<GameState>): Promise<GameState>;
 }
 
 export class MemStorage implements IStorage {
@@ -98,7 +98,7 @@ export class MemStorage implements IStorage {
     this.activeCampaignId = null;
   }
 
-  async init(): Promise<void> {
+  async init(sessionId: string): Promise<void> {
     await this.initializeDefaultData();
   }
 
@@ -223,7 +223,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
   }
 
   // Character management
-  async getCharacter(): Promise<Character | undefined> {
+  async getCharacter(sessionId: string): Promise<Character | undefined> {
     return this.character;
   }
 
@@ -253,7 +253,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
     return this.character;
   }
 
-  async updateCharacter(id: string, updates: Partial<Character>): Promise<Character | null> {
+  async updateCharacter(id: string, sessionId: string, updates: Partial<Character>): Promise<Character | null> {
     if (!this.character || this.character.id !== id) {
       return null;
     }
@@ -315,7 +315,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
   }
 
   // Quest management
-  async getQuests(): Promise<Quest[]> {
+  async getQuests(sessionId: string): Promise<Quest[]> {
     return Array.from(this.quests.values()).sort((a, b) => {
       // Sort by priority (urgent > high > normal > low), then by status (active first)
       const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
@@ -328,7 +328,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
     });
   }
 
-  async getQuest(id: string): Promise<Quest | undefined> {
+  async getQuest(id: string, sessionId: string): Promise<Quest | undefined> {
     return this.quests.get(id);
   }
 
@@ -362,7 +362,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
     return newQuest;
   }
 
-  async updateQuest(id: string, updates: Partial<Quest>): Promise<Quest | null> {
+  async updateQuest(id: string, sessionId: string, updates: Partial<Quest>): Promise<Quest | null> {
     const quest = this.quests.get(id);
     if (!quest) {
       return null;
@@ -411,12 +411,12 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
     return { ...updatedQuest, wasJustCompleted } as Quest & { wasJustCompleted?: boolean };
   }
 
-  async deleteQuest(id: string): Promise<boolean> {
+  async deleteQuest(id: string, sessionId: string): Promise<boolean> {
     return this.quests.delete(id);
   }
 
   // Inventory management
-  async getItems(): Promise<Item[]> {
+  async getItems(sessionId: string): Promise<Item[]> {
     return Array.from(this.items.values()).sort((a, b) => {
       // Sort by equipped status first, then by rarity, then by type
       if (a.equipped !== b.equipped) return a.equipped ? -1 : 1;
@@ -430,7 +430,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
     });
   }
 
-  async getItem(id: string): Promise<Item | undefined> {
+  async getItem(id: string, sessionId: string): Promise<Item | undefined> {
     return this.items.get(id);
   }
 
@@ -449,7 +449,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
     return newItem;
   }
 
-  async updateItem(id: string, updates: Partial<Item>): Promise<Item | null> {
+  async updateItem(id: string, sessionId: string, updates: Partial<Item>): Promise<Item | null> {
     const item = this.items.get(id);
     if (!item) {
       return null;
@@ -471,16 +471,16 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
     return updatedItem;
   }
 
-  async deleteItem(id: string): Promise<boolean> {
+  async deleteItem(id: string, sessionId: string): Promise<boolean> {
     return this.items.delete(id);
   }
 
   // Message history for AI conversations
-  async getMessages(): Promise<Message[]> {
+  async getMessages(sessionId: string): Promise<Message[]> {
     return [...this.messages];
   }
 
-  async getRecentMessages(limit: number): Promise<Message[]> {
+  async getRecentMessages(sessionId: string, limit: number): Promise<Message[]> {
     return this.messages.slice(-limit);
   }
 
@@ -503,15 +503,15 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
     return newMessage;
   }
 
-  async clearMessages(): Promise<void> {
+  async clearMessages(sessionId: string): Promise<void> {
     this.messages = [];
   }
 
-  async clearQuests(): Promise<void> {
+  async clearQuests(sessionId: string): Promise<void> {
     this.quests.clear();
   }
 
-  async clearAllAdventureData(): Promise<void> {
+  async clearAllAdventureData(sessionId: string): Promise<void> {
     // Clear all game data for a fresh start
     this.character = undefined; // Clear character
     this.messages = [];
@@ -533,7 +533,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
   }
 
   // Game state management
-  async getGameState(): Promise<GameState | undefined> {
+  async getGameState(sessionId: string): Promise<GameState | undefined> {
     return this.gameState;
   }
 
@@ -556,7 +556,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
     return this.gameState;
   }
 
-  async updateGameState(updates: Partial<GameState>): Promise<GameState> {
+  async updateGameState(sessionId: string, updates: Partial<GameState>): Promise<GameState> {
     if (!this.gameState) {
       throw new Error('Game state not found');
     }

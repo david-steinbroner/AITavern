@@ -118,7 +118,7 @@ CHARACTER PROGRESSION:
 Remember: Keep responses engaging but focused. Always give players clear options. Always track quest progress.`;
   }
 
-  private async getGameContext(): Promise<{
+  private async getGameContext(sessionId: string): Promise<{
     character: Character | undefined;
     quests: Quest[];
     items: Item[];
@@ -126,11 +126,11 @@ Remember: Keep responses engaging but focused. Always give players clear options
     gameState: GameState | undefined;
   }> {
     const [character, quests, items, recentMessages, gameState] = await Promise.all([
-      storage.getCharacter(),
-      storage.getQuests(),
-      storage.getItems(),
-      storage.getRecentMessages(10),
-      storage.getGameState(),
+      storage.getCharacter(sessionId),
+      storage.getQuests(sessionId),
+      storage.getItems(sessionId),
+      storage.getRecentMessages(sessionId, 10),
+      storage.getGameState(sessionId),
     ]);
 
     return { character, quests, items, recentMessages, gameState };
@@ -232,9 +232,10 @@ Remember: Keep responses engaging but focused. Always give players clear options
     return prompt;
   }
 
-  async generateResponse(playerMessage: string): Promise<AIResponse> {
+  async generateResponse(sessionId: string, playerMessage: string): Promise<AIResponse> {
     const startTime = Date.now();
     console.log('[AI Service] Starting AI response generation', {
+      sessionId,
       playerMessage: playerMessage.substring(0, 100),
       timestamp: new Date().toISOString()
     });
@@ -250,7 +251,7 @@ Remember: Keep responses engaging but focused. Always give players clear options
 
       // Get current game context
       console.log('[AI Service] Fetching game context');
-      const context = await this.getGameContext();
+      const context = await this.getGameContext(sessionId);
       console.log('[AI Service] Game context retrieved', {
         hasCharacter: !!context.character,
         questCount: context.quests.length,
@@ -779,9 +780,9 @@ Format as JSON:
     }
   }
 
-  async generateQuestIdeas(playerLevel: number, currentScene: string): Promise<Quest[]> {
+  async generateQuestIdeas(sessionId: string, playerLevel: number, currentScene: string): Promise<Quest[]> {
     try {
-      const context = await this.getGameContext();
+      const context = await this.getGameContext(sessionId);
       
       const response = await openai.chat.completions.create({
         model: "anthropic/claude-3.5-haiku",

@@ -1,8 +1,8 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { randomUUID } from "crypto";
 import { storage } from "./storage";
-import { 
+import {
   insertCharacterSchema,
   insertQuestSchema,
   insertItemSchema,
@@ -15,12 +15,13 @@ import {
   type Quest,
   type Item,
   type Enemy,
-  type Campaign
+  type Campaign,
+  type Message
 } from "@shared/schema";
 import { z } from "zod";
 import { aiLimiter, generalLimiter, strictLimiter } from "./rateLimit";
 import { spendTracker } from "./spendTracker";
-import { aiService } from "./aiService";
+import { aiService, type AIResponse } from "./aiService";
 
 // Validation schemas for updates
 const updateCharacterSchema = insertCharacterSchema.partial().refine(
@@ -65,13 +66,195 @@ const updateItemSchema = insertItemSchema.partial().refine(
   { message: "Item quantity must be non-negative" }
 );
 
+const updateQuestSchemaForAI = insertQuestSchema.partial().refine(
+  (data) => {
+    if (data.progress !== undefined && data.maxProgress !== undefined) {
+      return data.progress <= data.maxProgress && data.progress >= 0;
+    }
+    if (data.progress !== undefined) {
+      return data.progress >= 0;
+    }
+    return true;
+  },
+  { message: "Quest progress must be valid" }
+);
+
+/**
+ * Shared helper to apply AI response actions to game state.
+ * Used by both /api/ai/chat and /api/ai/quick-action endpoints.
+ */
+async function applyAIResponse(
+  sessionId: string,
+  playerMessage: string,
+  aiResponseData: AIResponse
+): Promise<Message> {
+  // Store the player message
+  await storage.createMessage({
+    sessionId,
+    content: playerMessage,
+    sender: 'player',
+    senderName: null,
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  });
+
+  // Store the AI response
+  const aiMessage = await storage.createMessage({
+    sessionId,
+    content: aiResponseData.content,
+    sender: aiResponseData.sender,
+    senderName: aiResponseData.senderName,
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  });
+
+  // Apply any game actions from the AI response with validation
+  if (aiResponseData.actions) {
+    const actions = aiResponseData.actions;
+
+    // Update quest if specified
+    if (actions.updateQuest) {
+      const questValidation = updateQuestSchemaForAI.safeParse(actions.updateQuest.updates);
+      if (questValidation.success) {
+        const updatedQuest = await storage.updateQuest(actions.updateQuest.id, sessionId, questValidation.data);
+
+        // Generate follow-up quest if main story quest was just completed
+        if (updatedQuest && (updatedQuest as any).wasJustCompleted && updatedQuest.isMainStory) {
+          try {
+            const character = await storage.getCharacter(sessionId);
+            const gameState = await storage.getGameState(sessionId);
+            const followUpQuest = await aiService.generateFollowUpQuest(updatedQuest, { character, gameState });
+
+            if (followUpQuest) {
+              // Ensure the completed quest has a chainId for consistency
+              if (!updatedQuest.chainId) {
+                await storage.updateQuest(updatedQuest.id, sessionId, { chainId: updatedQuest.id });
+              }
+
+              // Validate and create follow-up quest
+              const followUpValidation = insertQuestSchema.safeParse({
+                ...followUpQuest,
+                sessionId,
+                parentQuestId: updatedQuest.id,
+                chainId: updatedQuest.chainId || updatedQuest.id,
+                isMainStory: true
+              });
+
+              if (followUpValidation.success) {
+                await storage.createQuest(followUpValidation.data);
+              } else {
+                console.warn('Invalid follow-up quest data:', followUpValidation.error.errors);
+              }
+            }
+          } catch (error) {
+            console.warn('Error generating follow-up quest:', error);
+          }
+        }
+      } else {
+        console.warn('Invalid AI quest update:', questValidation.error.errors);
+      }
+    }
+
+    // Create new quest if specified
+    if (actions.createQuest) {
+      const questValidation = insertQuestSchema.safeParse({ ...actions.createQuest, sessionId });
+      if (questValidation.success) {
+        await storage.createQuest(questValidation.data);
+      } else {
+        console.warn('Invalid AI quest creation:', questValidation.error.errors);
+      }
+    }
+
+    // Update character if specified
+    if (actions.updateCharacter) {
+      const character = await storage.getCharacter(sessionId);
+      if (character) {
+        const charValidation = insertCharacterSchema.partial().safeParse(actions.updateCharacter.updates);
+        if (charValidation.success) {
+          await storage.updateCharacter(character.id, sessionId, charValidation.data);
+        } else {
+          console.warn('Invalid AI character update:', charValidation.error.errors);
+        }
+      }
+    }
+
+    // Update game state if specified
+    if (actions.updateGameState) {
+      const gameStateValidation = insertGameStateSchema.partial().safeParse(actions.updateGameState);
+      if (gameStateValidation.success) {
+        await storage.updateGameState(sessionId, gameStateValidation.data);
+      } else {
+        console.warn('Invalid AI game state update:', gameStateValidation.error.errors);
+      }
+    }
+
+    // Give item if specified
+    if (actions.giveItem) {
+      const itemValidation = insertItemSchema.safeParse({ ...actions.giveItem, sessionId });
+      if (itemValidation.success) {
+        await storage.createItem(itemValidation.data);
+      } else {
+        console.warn('Invalid AI item creation:', itemValidation.error.errors);
+      }
+    }
+  }
+
+  // Detect side quest opportunities
+  try {
+    const character = await storage.getCharacter(sessionId);
+    const quests = await storage.getQuests(sessionId);
+    const recentMessages = await storage.getRecentMessages(sessionId, 10);
+    const gameState = await storage.getGameState(sessionId);
+
+    const shouldGenerateSideQuest = await aiService.detectSideQuestOpportunity(playerMessage, {
+      character,
+      quests,
+      recentMessages,
+      gameState
+    });
+
+    if (shouldGenerateSideQuest) {
+      console.log('[Routes] Side quest opportunity detected, generating side quest');
+
+      const sideQuest = await aiService.generateSideQuest(playerMessage, {
+        character,
+        gameState,
+        recentMessages
+      });
+
+      if (sideQuest) {
+        const questValidation = insertQuestSchema.safeParse({ ...sideQuest, sessionId });
+        if (questValidation.success) {
+          await storage.createQuest(questValidation.data);
+          console.log('[Routes] Side quest created:', sideQuest.title);
+        } else {
+          console.warn('[Routes] Invalid side quest data:', questValidation.error.errors);
+        }
+      }
+    }
+  } catch (sideQuestError) {
+    // Don't fail the entire request if side quest generation fails
+    console.warn('[Routes] Side quest generation failed (non-critical):', sideQuestError);
+  }
+
+  return aiMessage;
+}
+
+/**
+ * Extract sessionId from request header. Throws if missing.
+ */
+function getSessionId(req: Request): string {
+  const sessionId = req.headers['x-session-id'] as string;
+  if (!sessionId) throw new Error('Missing x-session-id header');
+  return sessionId;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Initialize storage with default data
-  await storage.init();
+  // Initialize storage with default data (system context, no user session)
+  await storage.init('system');
   // Character routes
-  app.get("/api/character", async (_req, res) => {
+  app.get("/api/character", async (req, res) => {
     try {
-      const character = await storage.getCharacter();
+      const sessionId = getSessionId(req);
+      const character = await storage.getCharacter(sessionId);
       // Return null instead of 404 when no character exists
       // This allows the UI to properly detect "no active game" state
       res.json(character || null);
@@ -83,7 +266,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/character", async (req, res) => {
     try {
-      const result = insertCharacterSchema.safeParse(req.body);
+      const sessionId = getSessionId(req);
+      const result = insertCharacterSchema.safeParse({ ...req.body, sessionId });
       if (!result.success) {
         return res.status(400).json({ error: "Invalid character data", details: result.error.errors });
       }
@@ -103,9 +287,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
           // Update game state with generated world
-          const gameState = await storage.getGameState();
+          const gameState = await storage.getGameState(sessionId);
           if (gameState) {
-            await storage.updateGameState({
+            await storage.updateGameState(sessionId, {
               worldSetting: worldData.worldSetting,
               worldTheme: worldData.worldTheme,
               worldDescription: worldData.worldDescription,
@@ -115,8 +299,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // Clear existing quests and create the initial quest from world generation
-          await storage.clearQuests();
+          await storage.clearQuests(sessionId);
           await storage.createQuest({
+            sessionId,
             title: worldData.initialQuest.title,
             description: worldData.initialQuest.description,
             status: 'active',
@@ -127,13 +312,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
           // Clear existing items and add world-specific starting items
-          const currentItems = await storage.getItems();
+          const currentItems = await storage.getItems(sessionId);
           for (const item of currentItems) {
-            await storage.deleteItem(item.id);
+            await storage.deleteItem(item.id, sessionId);
           }
 
           for (const item of worldData.startingItems) {
             await storage.createItem({
+              sessionId,
               ...item,
               quantity: 1,
               rarity: 'common',
@@ -142,8 +328,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // Clear messages and add welcome message
-          await storage.clearMessages();
+          await storage.clearMessages(sessionId);
           await storage.createMessage({
+            sessionId,
             content: `Welcome to ${worldData.worldSetting}! ${worldData.worldDescription}\n\nYou find yourself in ${worldData.initialScene}.\n\n${worldData.initialQuest.description}\n\n**What do you do?**`,
             sender: 'dm',
             senderName: null,
@@ -167,12 +354,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/character/:id", async (req, res) => {
     try {
+      const sessionId = getSessionId(req);
       const result = updateCharacterSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: "Invalid character data", details: result.error.errors });
       }
-      
-      const character = await storage.updateCharacter(req.params.id, result.data);
+
+      const character = await storage.updateCharacter(req.params.id, sessionId, result.data);
       if (!character) {
         return res.status(404).json({ error: "Character not found" });
       }
@@ -200,8 +388,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/adventure/reset", async (req, res) => {
     try {
+      const sessionId = getSessionId(req);
       // Clear all adventure data (character, messages, quests, items, enemies, game state)
-      await storage.clearAllAdventureData();
+      await storage.clearAllAdventureData(sessionId);
 
       // DO NOT re-initialize - user should start fresh with no character
       // They can create a new character or select an adventure template
@@ -215,6 +404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/adventure/initialize", async (req, res) => {
     try {
+      const sessionId = getSessionId(req);
       const result = adventureTemplateSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: "Invalid adventure template data", details: result.error.errors });
@@ -223,9 +413,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const template = result.data;
 
       // Create a default character if none exists
-      const existingCharacter = await storage.getCharacter();
+      const existingCharacter = await storage.getCharacter(sessionId);
       if (!existingCharacter) {
         await storage.createCharacter({
+          sessionId,
           name: 'Adventurer',
           class: 'Fighter',
           level: 1,
@@ -244,7 +435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update game state with the new adventure
-      await storage.updateGameState({
+      await storage.updateGameState(sessionId, {
         currentScene: template.initialScene,
         inCombat: false,
         currentTurn: null,
@@ -252,11 +443,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Clear existing quests and messages for fresh adventure start
-      await storage.clearQuests();
-      await storage.clearMessages();
+      await storage.clearQuests(sessionId);
+      await storage.clearMessages(sessionId);
 
       // Create the initial quest
       const quest = await storage.createQuest({
+        sessionId,
         title: template.initialQuest.title,
         description: template.initialQuest.description,
         status: 'active',
@@ -270,6 +462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const welcomeMessage = await storage.createMessage({
+        sessionId,
         content: template.introMessage || `Welcome to ${template.name}! You find yourself in ${template.initialScene}. ${template.initialQuest.description}`,
         sender: 'dm',
         senderName: null,
@@ -280,7 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         quest,
         message: welcomeMessage,
-        gameState: await storage.getGameState()
+        gameState: await storage.getGameState(sessionId)
       });
     } catch (error) {
       console.error('Error initializing adventure template:', error);
@@ -567,9 +760,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Quest routes
-  app.get("/api/quests", async (_req, res) => {
+  app.get("/api/quests", async (req, res) => {
     try {
-      const quests = await storage.getQuests();
+      const sessionId = getSessionId(req);
+      const quests = await storage.getQuests(sessionId);
       res.json(quests);
     } catch (error) {
       console.error('Error fetching quests:', error);
@@ -579,7 +773,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/quests/:id", async (req, res) => {
     try {
-      const quest = await storage.getQuest(req.params.id);
+      const sessionId = getSessionId(req);
+      const quest = await storage.getQuest(req.params.id, sessionId);
       if (!quest) {
         return res.status(404).json({ error: "Quest not found" });
       }
@@ -592,11 +787,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/quests", async (req, res) => {
     try {
-      const result = insertQuestSchema.safeParse(req.body);
+      const sessionId = getSessionId(req);
+      const result = insertQuestSchema.safeParse({ ...req.body, sessionId });
       if (!result.success) {
         return res.status(400).json({ error: "Invalid quest data", details: result.error.errors });
       }
-      
+
       const quest = await storage.createQuest(result.data);
       res.json(quest);
     } catch (error) {
@@ -607,12 +803,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/quests/:id", async (req, res) => {
     try {
+      const sessionId = getSessionId(req);
       const result = updateQuestSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: "Invalid quest data", details: result.error.errors });
       }
-      
-      const quest = await storage.updateQuest(req.params.id, result.data);
+
+      const quest = await storage.updateQuest(req.params.id, sessionId, result.data);
       if (!quest) {
         return res.status(404).json({ error: "Quest not found" });
       }
@@ -625,7 +822,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/quests/:id", async (req, res) => {
     try {
-      const deleted = await storage.deleteQuest(req.params.id);
+      const sessionId = getSessionId(req);
+      const deleted = await storage.deleteQuest(req.params.id, sessionId);
       if (!deleted) {
         return res.status(404).json({ error: "Quest not found" });
       }
@@ -637,9 +835,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Inventory routes
-  app.get("/api/items", async (_req, res) => {
+  app.get("/api/items", async (req, res) => {
     try {
-      const items = await storage.getItems();
+      const sessionId = getSessionId(req);
+      const items = await storage.getItems(sessionId);
       res.json(items);
     } catch (error) {
       console.error('Error fetching items:', error);
@@ -649,7 +848,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/items/:id", async (req, res) => {
     try {
-      const item = await storage.getItem(req.params.id);
+      const sessionId = getSessionId(req);
+      const item = await storage.getItem(req.params.id, sessionId);
       if (!item) {
         return res.status(404).json({ error: "Item not found" });
       }
@@ -662,11 +862,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/items", async (req, res) => {
     try {
-      const result = insertItemSchema.safeParse(req.body);
+      const sessionId = getSessionId(req);
+      const result = insertItemSchema.safeParse({ ...req.body, sessionId });
       if (!result.success) {
         return res.status(400).json({ error: "Invalid item data", details: result.error.errors });
       }
-      
+
       const item = await storage.createItem(result.data);
       res.json(item);
     } catch (error) {
@@ -677,12 +878,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/items/:id", async (req, res) => {
     try {
+      const sessionId = getSessionId(req);
       const result = updateItemSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: "Invalid item data", details: result.error.errors });
       }
-      
-      const item = await storage.updateItem(req.params.id, result.data);
+
+      const item = await storage.updateItem(req.params.id, sessionId, result.data);
       if (!item) {
         return res.status(404).json({ error: "Item not found" });
       }
@@ -695,7 +897,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/items/:id", async (req, res) => {
     try {
-      const deleted = await storage.deleteItem(req.params.id);
+      const sessionId = getSessionId(req);
+      const deleted = await storage.deleteItem(req.params.id, sessionId);
       if (!deleted) {
         return res.status(404).json({ error: "Item not found" });
       }
@@ -709,6 +912,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Message routes for AI conversation
   app.get("/api/messages", async (req, res) => {
     try {
+      const sessionId = getSessionId(req);
       let limit: number | undefined;
       if (req.query.limit) {
         const parsed = parseInt(req.query.limit as string);
@@ -717,10 +921,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         limit = Math.min(parsed, 100); // Cap at 100 messages
       }
-      
-      const messages = limit ? 
-        await storage.getRecentMessages(limit) : 
-        await storage.getMessages();
+
+      const messages = limit ?
+        await storage.getRecentMessages(sessionId, limit) :
+        await storage.getMessages(sessionId);
       res.json(messages);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -730,17 +934,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/messages", async (req, res) => {
     try {
+      const sessionId = getSessionId(req);
       // Set server-side timestamp
       const messageData = {
         ...req.body,
+        sessionId,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
-      
+
       const result = insertMessageSchema.safeParse(messageData);
       if (!result.success) {
         return res.status(400).json({ error: "Invalid message data", details: result.error.errors });
       }
-      
+
       const message = await storage.createMessage(result.data);
       res.json(message);
     } catch (error) {
@@ -749,9 +955,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/messages", async (_req, res) => {
+  app.delete("/api/messages", async (req, res) => {
     try {
-      await storage.clearMessages();
+      const sessionId = getSessionId(req);
+      await storage.clearMessages(sessionId);
       res.json({ success: true });
     } catch (error) {
       console.error('Error clearing messages:', error);
@@ -760,9 +967,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Game state routes
-  app.get("/api/game-state", async (_req, res) => {
+  app.get("/api/game-state", async (req, res) => {
     try {
-      const gameState = await storage.getGameState();
+      const sessionId = getSessionId(req);
+      const gameState = await storage.getGameState(sessionId);
       res.json(gameState);
     } catch (error) {
       console.error('Error fetching game state:', error);
@@ -772,11 +980,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/game-state", async (req, res) => {
     try {
-      const result = insertGameStateSchema.safeParse(req.body);
+      const sessionId = getSessionId(req);
+      const result = insertGameStateSchema.safeParse({ ...req.body, sessionId });
       if (!result.success) {
         return res.status(400).json({ error: "Invalid game state data", details: result.error.errors });
       }
-      
+
       const gameState = await storage.createGameState(result.data);
       res.json(gameState);
     } catch (error) {
@@ -787,7 +996,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/game-state", async (req, res) => {
     try {
-      const gameState = await storage.updateGameState(req.body);
+      const sessionId = getSessionId(req);
+      const gameState = await storage.updateGameState(sessionId, req.body);
       res.json(gameState);
     } catch (error) {
       console.error('Error updating game state:', error);
@@ -798,6 +1008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Conversation endpoints
   app.post("/api/ai/chat", aiLimiter, async (req, res) => {
     try {
+      const sessionId = getSessionId(req);
       const { message } = req.body;
       if (!message || typeof message !== 'string') {
         return res.status(400).json({ error: "Message is required" });
@@ -810,154 +1021,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate AI response
-      const aiResponse = await aiService.generateResponse(message);
-
+      const aiResponse = await aiService.generateResponse(sessionId, message);
 
       // Track successful AI request
       spendTracker.trackRequest();
-      // Store the player message
-      await storage.createMessage({
-        content: message,
-        sender: 'player',
-        senderName: null,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      });
 
-      // Store the AI response
-      const aiMessage = await storage.createMessage({
-        content: aiResponse.content,
-        sender: aiResponse.sender,
-        senderName: aiResponse.senderName,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      });
-
-      // Apply any game actions from the AI response with validation
-      if (aiResponse.actions) {
-        const actions = aiResponse.actions;
-        
-        // Update quest if specified
-        if (actions.updateQuest) {
-          const questValidation = updateQuestSchema.safeParse(actions.updateQuest.updates);
-          if (questValidation.success) {
-            const updatedQuest = await storage.updateQuest(actions.updateQuest.id, questValidation.data);
-            
-            // Generate follow-up quest if main story quest was just completed
-            if (updatedQuest && (updatedQuest as any).wasJustCompleted && updatedQuest.isMainStory) {
-              try {
-                const character = await storage.getCharacter();
-                const gameState = await storage.getGameState();
-                const followUpQuest = await aiService.generateFollowUpQuest(updatedQuest, { character, gameState });
-                
-                if (followUpQuest) {
-                  // Ensure the completed quest has a chainId for consistency
-                  if (!updatedQuest.chainId) {
-                    await storage.updateQuest(updatedQuest.id, { chainId: updatedQuest.id });
-                  }
-                  
-                  // Validate and create follow-up quest
-                  const questValidation = insertQuestSchema.safeParse({
-                    ...followUpQuest,
-                    parentQuestId: updatedQuest.id,
-                    chainId: updatedQuest.chainId || updatedQuest.id,
-                    isMainStory: true
-                  });
-                  
-                  if (questValidation.success) {
-                    await storage.createQuest(questValidation.data);
-                  } else {
-                    console.warn('Invalid follow-up quest data:', questValidation.error.errors);
-                  }
-                }
-              } catch (error) {
-                console.warn('Error generating follow-up quest:', error);
-              }
-            }
-          } else {
-            console.warn('Invalid AI quest update:', questValidation.error.errors);
-          }
-        }
-
-        // Create new quest if specified
-        if (actions.createQuest) {
-          const questValidation = insertQuestSchema.safeParse(actions.createQuest);
-          if (questValidation.success) {
-            await storage.createQuest(questValidation.data);
-          } else {
-            console.warn('Invalid AI quest creation:', questValidation.error.errors);
-          }
-        }
-
-        // Update character if specified
-        if (actions.updateCharacter) {
-          const character = await storage.getCharacter();
-          if (character) {
-            const charValidation = updateCharacterSchema.safeParse(actions.updateCharacter.updates);
-            if (charValidation.success) {
-              await storage.updateCharacter(character.id, charValidation.data);
-            } else {
-              console.warn('Invalid AI character update:', charValidation.error.errors);
-            }
-          }
-        }
-
-        // Update game state if specified
-        if (actions.updateGameState) {
-          const gameStateValidation = insertGameStateSchema.partial().safeParse(actions.updateGameState);
-          if (gameStateValidation.success) {
-            await storage.updateGameState(gameStateValidation.data);
-          } else {
-            console.warn('Invalid AI game state update:', gameStateValidation.error.errors);
-          }
-        }
-
-        // Give item if specified
-        if (actions.giveItem) {
-          const itemValidation = insertItemSchema.safeParse(actions.giveItem);
-          if (itemValidation.success) {
-            await storage.createItem(itemValidation.data);
-          } else {
-            console.warn('Invalid AI item creation:', itemValidation.error.errors);
-          }
-        }
-      }
-
-      // PHASE 3: Detect side quest opportunities
-      try {
-        const character = await storage.getCharacter();
-        const quests = await storage.getQuests();
-        const recentMessages = await storage.getRecentMessages(10);
-        const gameState = await storage.getGameState();
-
-        const shouldGenerateSideQuest = await aiService.detectSideQuestOpportunity(message, {
-          character,
-          quests,
-          recentMessages,
-          gameState
-        });
-
-        if (shouldGenerateSideQuest) {
-          console.log('[Routes] Side quest opportunity detected, generating side quest');
-
-          const sideQuest = await aiService.generateSideQuest(message, {
-            character,
-            gameState,
-            recentMessages
-          });
-
-          if (sideQuest) {
-            const questValidation = insertQuestSchema.safeParse(sideQuest);
-            if (questValidation.success) {
-              await storage.createQuest(questValidation.data);
-              console.log('[Routes] Side quest created:', sideQuest.title);
-            } else {
-              console.warn('[Routes] Invalid side quest data:', questValidation.error.errors);
-            }
-          }
-        }
-      } catch (sideQuestError) {
-        // Don't fail the entire request if side quest generation fails
-        console.warn('[Routes] Side quest generation failed (non-critical):', sideQuestError);
-      }
+      // Apply AI response (store messages, apply actions, detect side quests)
+      const aiMessage = await applyAIResponse(sessionId, message, aiResponse);
 
       res.json({
         message: aiMessage,
@@ -973,6 +1043,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Quick action endpoint for predefined actions
   app.post("/api/ai/quick-action", aiLimiter, async (req, res) => {
     try {
+      const sessionId = getSessionId(req);
       const { action } = req.body;
       if (!action || typeof action !== 'string') {
         return res.status(400).json({ error: "Action is required" });
@@ -1002,7 +1073,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           actionMessage = `I perform the ${action} action.`;
       }
 
-
       // Check daily spend limit
       const spendCheck = spendTracker.canMakeRequest();
       if (!spendCheck.allowed) {
@@ -1011,142 +1081,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Track successful AI request
       spendTracker.trackRequest();
+
       // Process the quick action as a regular chat message
-      const aiResponse = await aiService.generateResponse(actionMessage);
+      const aiResponse = await aiService.generateResponse(sessionId, actionMessage);
 
-      // Store messages and apply actions (same as regular chat)
-      await storage.createMessage({
-        content: actionMessage,
-        sender: 'player',
-        senderName: null,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      });
-
-      const aiMessage = await storage.createMessage({
-        content: aiResponse.content,
-        sender: aiResponse.sender,
-        senderName: aiResponse.senderName,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      });
-
-      // Apply actions if any with validation
-      if (aiResponse.actions) {
-        const actions = aiResponse.actions;
-        
-        if (actions.updateQuest) {
-          const questValidation = updateQuestSchema.safeParse(actions.updateQuest.updates);
-          if (questValidation.success) {
-            const updatedQuest = await storage.updateQuest(actions.updateQuest.id, questValidation.data);
-            
-            // Generate follow-up quest if main story quest was just completed
-            if (updatedQuest && (updatedQuest as any).wasJustCompleted && updatedQuest.isMainStory) {
-              try {
-                const character = await storage.getCharacter();
-                const gameState = await storage.getGameState();
-                const followUpQuest = await aiService.generateFollowUpQuest(updatedQuest, { character, gameState });
-                
-                if (followUpQuest) {
-                  // Ensure the completed quest has a chainId for consistency
-                  if (!updatedQuest.chainId) {
-                    await storage.updateQuest(updatedQuest.id, { chainId: updatedQuest.id });
-                  }
-                  
-                  // Validate and create follow-up quest
-                  const questValidation = insertQuestSchema.safeParse({
-                    ...followUpQuest,
-                    parentQuestId: updatedQuest.id,
-                    chainId: updatedQuest.chainId || updatedQuest.id,
-                    isMainStory: true
-                  });
-                  
-                  if (questValidation.success) {
-                    await storage.createQuest(questValidation.data);
-                  } else {
-                    console.warn('Invalid follow-up quest data:', questValidation.error.errors);
-                  }
-                }
-              } catch (error) {
-                console.warn('Error generating follow-up quest:', error);
-              }
-            }
-          } else {
-            console.warn('Invalid AI quest update:', questValidation.error.errors);
-          }
-        }
-        if (actions.createQuest) {
-          const questValidation = insertQuestSchema.safeParse(actions.createQuest);
-          if (questValidation.success) {
-            await storage.createQuest(questValidation.data);
-          } else {
-            console.warn('Invalid AI quest creation:', questValidation.error.errors);
-          }
-        }
-        if (actions.updateCharacter) {
-          const character = await storage.getCharacter();
-          if (character) {
-            const charValidation = updateCharacterSchema.safeParse(actions.updateCharacter.updates);
-            if (charValidation.success) {
-              await storage.updateCharacter(character.id, charValidation.data);
-            } else {
-              console.warn('Invalid AI character update:', charValidation.error.errors);
-            }
-          }
-        }
-        if (actions.updateGameState) {
-          const gameStateValidation = insertGameStateSchema.partial().safeParse(actions.updateGameState);
-          if (gameStateValidation.success) {
-            await storage.updateGameState(gameStateValidation.data);
-          } else {
-            console.warn('Invalid AI game state update:', gameStateValidation.error.errors);
-          }
-        }
-        if (actions.giveItem) {
-          const itemValidation = insertItemSchema.safeParse(actions.giveItem);
-          if (itemValidation.success) {
-            await storage.createItem(itemValidation.data);
-          } else {
-            console.warn('Invalid AI item creation:', itemValidation.error.errors);
-          }
-        }
-      }
-
-      // PHASE 3: Detect side quest opportunities
-      try {
-        const character = await storage.getCharacter();
-        const quests = await storage.getQuests();
-        const recentMessages = await storage.getRecentMessages(10);
-        const gameState = await storage.getGameState();
-
-        const shouldGenerateSideQuest = await aiService.detectSideQuestOpportunity(actionMessage, {
-          character,
-          quests,
-          recentMessages,
-          gameState
-        });
-
-        if (shouldGenerateSideQuest) {
-          console.log('[Routes] Side quest opportunity detected in quick action, generating side quest');
-
-          const sideQuest = await aiService.generateSideQuest(actionMessage, {
-            character,
-            gameState,
-            recentMessages
-          });
-
-          if (sideQuest) {
-            const questValidation = insertQuestSchema.safeParse(sideQuest);
-            if (questValidation.success) {
-              await storage.createQuest(questValidation.data);
-              console.log('[Routes] Side quest created from quick action:', sideQuest.title);
-            } else {
-              console.warn('[Routes] Invalid side quest data:', questValidation.error.errors);
-            }
-          }
-        }
-      } catch (sideQuestError) {
-        // Don't fail the entire request if side quest generation fails
-        console.warn('[Routes] Side quest generation failed (non-critical):', sideQuestError);
-      }
+      // Apply AI response (store messages, apply actions, detect side quests)
+      const aiMessage = await applyAIResponse(sessionId, actionMessage, aiResponse);
 
       res.json({
         message: aiMessage,

@@ -6,6 +6,7 @@ import { z } from "zod";
 // D&D Character Schema
 export const characters = pgTable("characters", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull(),
   name: text("name").notNull(),
   class: text("class").notNull(),
   level: integer("level").default(1).notNull(),
@@ -34,6 +35,7 @@ export const characters = pgTable("characters", {
 // Quest Schema
 export const quests = pgTable("quests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull(),
   title: text("title").notNull(),
   description: text("description").notNull(),
   status: text("status").notNull(), // active, completed, failed
@@ -49,6 +51,7 @@ export const quests = pgTable("quests", {
 // Inventory Item Schema
 export const items = pgTable("items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull(),
   name: text("name").notNull(),
   type: text("type").notNull(), // weapon, armor, consumable, misc
   description: text("description"),
@@ -60,6 +63,7 @@ export const items = pgTable("items", {
 // Chat Message Schema for AI DM
 export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull(),
   content: text("content").notNull(),
   sender: text("sender").notNull(), // player, dm, npc
   senderName: text("sender_name"),
@@ -94,6 +98,7 @@ export const campaigns = pgTable("campaigns", {
 // Game State Schema (now linked to campaigns)
 export const gameState = pgTable("game_state", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull(),
   campaignId: varchar("campaign_id"),
   currentScene: text("current_scene").notNull(),
   inCombat: boolean("in_combat").default(false).notNull(),
