@@ -719,7 +719,8 @@ function GameApp() {
       </div>
 
       {/* Main Content - Flexible height, accounts for header + nav */}
-      <main className="flex-1 overflow-auto px-3 sm:px-4 py-3 sm:py-4 pb-20">
+      {/* Chat tab needs overflow-hidden so ChatInterface can manage its own scroll */}
+      <main className={`flex-1 px-3 sm:px-4 py-3 sm:py-4 pb-20 ${activeTab === 'chat' ? 'overflow-hidden' : 'overflow-auto'}`}>
         <div className="h-full">
           {getPageContent()}
         </div>

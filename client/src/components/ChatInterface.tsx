@@ -283,7 +283,7 @@ ${JSON.stringify(debugInfo, null, 2)}
   };
   
   return (
-    <div className={`h-full flex flex-col ${className}`} data-testid="chat-interface">
+    <div className={`h-full flex flex-col pb-20 ${className}`} data-testid="chat-interface">
       <Card className="flex-1 flex flex-col overflow-hidden">
         <PageHeader
           title="Your Story"

@@ -6,6 +6,11 @@ import "./index.css";
 import { initSentry } from "./lib/sentry";
 import { initPostHog } from "./lib/posthog";
 
+// Generate session ID if one doesn't exist
+if (!localStorage.getItem('sessionId')) {
+  localStorage.setItem('sessionId', crypto.randomUUID());
+}
+
 // Initialize Sentry first (catches errors during initialization)
 initSentry();
 
