@@ -1,5 +1,5 @@
-import { 
-  type User, 
+import {
+  type User,
   type InsertUser,
   type Character,
   type InsertCharacter,
@@ -17,6 +17,7 @@ import {
   type InsertCampaign
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { DbStorage } from "./dbStorage";
 
 // AI TTRPG Game Storage Interface
 export interface IStorage {
@@ -78,6 +79,8 @@ export interface IStorage {
 }
 
 export class MemStorage implements IStorage {
+  // MemStorage uses a constant sessionId since it's single-session in-memory storage
+  private readonly MEM_SESSION_ID = 'mem-session';
   private users: Map<string, User>;
   private character: Character | undefined;
   private quests: Map<string, Quest>;
@@ -106,6 +109,7 @@ export class MemStorage implements IStorage {
     // Create a default character if none exists
     if (!this.character) {
       await this.createCharacter({
+        sessionId: this.MEM_SESSION_ID,
         name: 'Adventurer',
         class: 'Fighter',
         level: 1,
@@ -126,6 +130,7 @@ export class MemStorage implements IStorage {
     // Initialize with some starter items
     if (this.items.size === 0) {
       await this.createItem({
+        sessionId: this.MEM_SESSION_ID,
         name: 'Iron Sword',
         type: 'weapon',
         description: 'A sturdy iron blade.',
@@ -133,8 +138,9 @@ export class MemStorage implements IStorage {
         rarity: 'common',
         equipped: true,
       });
-      
+
       await this.createItem({
+        sessionId: this.MEM_SESSION_ID,
         name: 'Leather Armor',
         type: 'armor',
         description: 'Basic protection.',
@@ -142,8 +148,9 @@ export class MemStorage implements IStorage {
         rarity: 'common',
         equipped: true,
       });
-      
+
       await this.createItem({
+        sessionId: this.MEM_SESSION_ID,
         name: 'Health Potion',
         type: 'consumable',
         description: 'Restores 25 HP.',
@@ -156,6 +163,7 @@ export class MemStorage implements IStorage {
     // Initialize with a starter quest
     if (this.quests.size === 0) {
       await this.createQuest({
+        sessionId: this.MEM_SESSION_ID,
         title: 'Begin Your Adventure',
         description: 'Welcome to your journey! Explore the world and discover your destiny.',
         status: 'active',
@@ -170,6 +178,7 @@ export class MemStorage implements IStorage {
     if (!this.gameState) {
       this.gameState = {
         id: randomUUID(),
+        sessionId: this.MEM_SESSION_ID,
         campaignId: null, // Default campaign support
         currentScene: 'Starting Village',
         inCombat: false,
@@ -187,6 +196,7 @@ export class MemStorage implements IStorage {
     if (this.messages.length === 0) {
       this.messages.push({
         id: randomUUID(),
+        sessionId: this.MEM_SESSION_ID,
         content: `The morning sun breaks through the mist as you arrive at Millhaven, a bustling village nestled between ancient forests and rolling hills. The scent of fresh bread wafts from the bakery, mingling with the metallic tang of the blacksmith's forge. Weathered stone buildings line cobblestone streets, their thatched roofs still damp from last night's rain. Villagers bustle about their morning routines—merchants setting up market stalls, children chasing chickens, farmers hauling carts of vegetables—but you notice something peculiar: worried glances cast toward the shadowy forest edge, and hushed conversations that fall silent when strangers pass.
 
 You've traveled far to reach this place, drawn by rumors that have spread throughout the kingdom. Three villagers have vanished without a trace over the past fortnight, all last seen near the old forest road. Strange howls echo through the night—sounds unlike any natural wolf. The village elder, a weathered woman named Mirela with silver-streaked hair and knowing eyes, has posted notices seeking brave adventurers to investigate these dark omens. The local tavern, "The Sleeping Dragon," stands at the village square, its wooden sign creaking in the breeze. Smoke curls from the chimney, promising warmth, ale, and perhaps information from loose-tongued locals. The morning market sprawls nearby, where you might acquire supplies for the journey ahead. And there, at the far end of the main road, the forest looms—ancient, dark, and waiting.
@@ -231,6 +241,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
     const id = randomUUID();
     const newCharacter: Character = {
       id,
+      sessionId: character.sessionId,
       name: character.name,
       class: character.class,
       level: character.level ?? 1,
@@ -347,6 +358,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
     const id = randomUUID();
     const newQuest: Quest = {
       id,
+      sessionId: quest.sessionId,
       title: quest.title,
       description: quest.description,
       status: quest.status,
@@ -404,7 +416,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
       const newExp = this.character.experience + expReward;
       
       // Apply level up logic through updateCharacter
-      await this.updateCharacter(this.character.id, { experience: newExp });
+      await this.updateCharacter(this.character.id, this.MEM_SESSION_ID, { experience: newExp });
     }
     
     // Return updated quest with completion flag for follow-up generation
@@ -438,6 +450,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
     const id = randomUUID();
     const newItem: Item = {
       id,
+      sessionId: item.sessionId,
       name: item.name,
       type: item.type,
       description: item.description ?? null,
@@ -488,6 +501,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
     const id = randomUUID();
     const newMessage: Message = {
       id,
+      sessionId: message.sessionId,
       content: message.content,
       sender: message.sender,
       senderName: message.senderName ?? null,
@@ -541,6 +555,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
     const id = randomUUID();
     const newGameState: GameState = {
       id,
+      sessionId: state.sessionId,
       campaignId: state.campaignId ?? null,
       currentScene: state.currentScene,
       inCombat: state.inCombat ?? false,
@@ -691,4 +706,4 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
   }
 }
 
-export const storage = new MemStorage();
+export const storage: IStorage = new DbStorage();

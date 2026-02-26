@@ -214,14 +214,14 @@ async function applyAIResponse(
     if (shouldGenerateSideQuest) {
       console.log('[Routes] Side quest opportunity detected, generating side quest');
 
-      const sideQuest = await aiService.generateSideQuest(playerMessage, {
+      const sideQuest = await aiService.generateSideQuest(sessionId, playerMessage, {
         character,
         gameState,
         recentMessages
       });
 
       if (sideQuest) {
-        const questValidation = insertQuestSchema.safeParse({ ...sideQuest, sessionId });
+        const questValidation = insertQuestSchema.safeParse(sideQuest);
         if (questValidation.success) {
           await storage.createQuest(questValidation.data);
           console.log('[Routes] Side quest created:', sideQuest.title);
@@ -549,11 +549,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Combat action endpoint
+  // Combat action endpoint (scheduled for deletion)
   app.post("/api/combat/action", aiLimiter, async (req, res) => {
     try {
+      const sessionId = getSessionId(req);
       const { action, targetId, spellId, itemId } = req.body;
-      
+
       if (!action || typeof action !== 'string') {
         return res.status(400).json({ error: "Action is required" });
       }
@@ -578,22 +579,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
         case 'enemy-turn':
           // Handle enemy turn automatically without AI (faster, more reliable)
-          const currentGameState = await storage.getGameState();
+          const currentGameState = await storage.getGameState(sessionId);
           if (currentGameState?.inCombat && currentGameState.combatId) {
             // Just advance the turn back to player
-            await storage.updateGameState({
+            await storage.updateGameState(sessionId, {
               currentTurn: 'player',
               turnCount: (currentGameState.turnCount ?? 0) + 1
             });
-            
+
             // Store the enemy turn message for consistency
             const message = await storage.createMessage({
+              sessionId,
               content: "Enemy completes their turn. It's your turn now!",
               sender: 'dm',
               senderName: null,
               timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             });
-            
+
             return res.json({ message });
           }
           return res.status(400).json({ error: "Not in combat" });
@@ -611,10 +613,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Track successful AI request
       spendTracker.trackRequest();
-      const aiResponse = await aiService.generateResponse(actionMessage);
+      const aiResponse = await aiService.generateResponse(sessionId, actionMessage);
 
       // Store messages
       await storage.createMessage({
+        sessionId,
         content: actionMessage,
         sender: 'player',
         senderName: null,
@@ -622,6 +625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const aiMessage = await storage.createMessage({
+        sessionId,
         content: aiResponse.content,
         sender: aiResponse.sender,
         senderName: aiResponse.senderName,
@@ -648,14 +652,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Update game state to start combat
-          await storage.updateGameState({
+          await storage.updateGameState(sessionId, {
             inCombat: true,
             combatId,
             currentTurn: 'player',
             turnCount: 1
           });
         }
-        
+
         // Update enemy if specified
         if ((actions as any).updateEnemy) {
           const enemyUpdate = (actions as any).updateEnemy;
@@ -668,26 +672,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // End combat if specified
         if ((actions as any).endCombat) {
           const endCombatData = (actions as any).endCombat;
-          
+
           // Award victory rewards before ending combat
           if (endCombatData.victory) {
-            const character = await storage.getCharacter();
+            const character = await storage.getCharacter(sessionId);
             if (character) {
               let expGain = 75; // Default experience
-              
+
               // Check if rewards is an object with experience property
               if (endCombatData.rewards && typeof endCombatData.rewards === 'object' && endCombatData.rewards.experience) {
                 expGain = endCombatData.rewards.experience;
               }
-              
+
               const rewardValidation = updateCharacterSchema.safeParse({ experience: character.experience + expGain });
               if (rewardValidation.success) {
-                await storage.updateCharacter(character.id, rewardValidation.data);
+                await storage.updateCharacter(character.id, sessionId, rewardValidation.data);
               }
             }
           }
-          
-          await storage.updateGameState({
+
+          await storage.updateGameState(sessionId, {
             inCombat: false,
             combatId: null,
             currentTurn: null,
@@ -696,41 +700,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         if (actions.updateCharacter) {
-          const character = await storage.getCharacter();
+          const character = await storage.getCharacter(sessionId);
           if (character) {
             const charValidation = updateCharacterSchema.safeParse(actions.updateCharacter.updates);
             if (charValidation.success) {
-              await storage.updateCharacter(character.id, charValidation.data);
+              await storage.updateCharacter(character.id, sessionId, charValidation.data);
             }
           }
         }
-        
+
         if (actions.updateGameState) {
           const gameStateValidation = insertGameStateSchema.partial().safeParse(actions.updateGameState);
           if (gameStateValidation.success) {
-            await storage.updateGameState(gameStateValidation.data);
+            await storage.updateGameState(sessionId, gameStateValidation.data);
           }
         }
       }
-      
+
       // Check for combat end conditions and turn management
-      const currentGameState = await storage.getGameState();
-      if (currentGameState?.inCombat && currentGameState.combatId) {
-        const combatEnemies = await storage.getEnemies(currentGameState.combatId);
+      const combatGameState = await storage.getGameState(sessionId);
+      if (combatGameState?.inCombat && combatGameState.combatId) {
+        const combatEnemies = await storage.getEnemies(combatGameState.combatId);
         const aliveEnemies = combatEnemies.filter(e => e.isActive && e.currentHealth > 0);
-        
+
         // End combat if no enemies left alive
         if (aliveEnemies.length === 0) {
           // Award victory rewards - base 50 exp + 10 per enemy defeated
-          const character = await storage.getCharacter();
+          const character = await storage.getCharacter(sessionId);
           if (character) {
             const baseExp = 50;
             const enemyExp = combatEnemies.length * 10;
             const totalExp = baseExp + enemyExp;
-            await storage.updateCharacter(character.id, { experience: character.experience + totalExp });
+            await storage.updateCharacter(character.id, sessionId, { experience: character.experience + totalExp });
           }
-          
-          await storage.updateGameState({
+
+          await storage.updateGameState(sessionId, {
             inCombat: false,
             combatId: null,
             currentTurn: null,
@@ -738,10 +742,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         } else {
           // Toggle turn after player action
-          const newTurn = currentGameState.currentTurn === 'player' ? 'enemy' : 'player';
-          const newTurnCount = newTurn === 'player' ? currentGameState.turnCount + 1 : currentGameState.turnCount;
-          
-          await storage.updateGameState({
+          const newTurn = combatGameState.currentTurn === 'player' ? 'enemy' : 'player';
+          const newTurnCount = newTurn === 'player' ? combatGameState.turnCount + 1 : combatGameState.turnCount;
+
+          await storage.updateGameState(sessionId, {
             currentTurn: newTurn,
             turnCount: newTurnCount
           });
@@ -1164,23 +1168,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Campaign reset rounds (scheduled for deletion)
   app.post("/api/campaigns/:id/reset-rounds", async (req, res) => {
     try {
+      const sessionId = getSessionId(req);
       const campaign = await storage.getCampaign(req.params.id);
       if (!campaign) {
         return res.status(404).json({ error: "Campaign not found" });
       }
-      
-      const gameState = await storage.getGameState();
+
+      const gameState = await storage.getGameState(sessionId);
       if (gameState) {
-        await storage.updateGameState({
+        await storage.updateGameState(sessionId, {
           turnCount: 0,
           currentTurn: null,
           combatId: null,
           inCombat: false
         });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error('Error resetting rounds:', error);

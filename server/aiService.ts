@@ -471,9 +471,9 @@ Example Quest Actions:
       }
 
       // Validate and sanitize the response
-      const finalResponse = {
+      const finalResponse: AIResponse = {
         content: aiResponse.content || "The DM pauses, considering your words...",
-        sender: aiResponse.sender === 'npc' ? 'npc' : 'dm',
+        sender: aiResponse.sender === 'npc' ? 'npc' as const : 'dm' as const,
         senderName: aiResponse.sender === 'npc' ? aiResponse.senderName : null,
         actions: aiResponse.actions || undefined
       };
@@ -696,6 +696,7 @@ Example Quest Actions:
   }
 
   async generateSideQuest(
+    sessionId: string,
     playerMessage: string,
     context: {
       character: Character | undefined;
@@ -758,6 +759,7 @@ Format as JSON:
         });
 
         return {
+          sessionId,
           title: result.title,
           description: result.description,
           status: 'active',
