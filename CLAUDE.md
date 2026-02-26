@@ -227,23 +227,58 @@ Lavender:          #C9B6E4  ← secondary actions
 
 ## 9. Current Milestone
 
-**Milestone 1: Foundation — Real Persistence & Session Isolation**
+**Milestone 2: AI Memory & Context — Rolling Story Summary**
 
-We are wiring the existing Drizzle schema to a real Supabase Postgres database and giving each browser session its own isolated game state.
+The AI currently only sees the last 5 messages of conversation context. This causes it to "forget" earlier story events, character details, and quest progress. We need to extend the AI's context window by implementing a rolling story summary.
+
+### Goal:
+The AI should always have the full narrative context of the adventure, not just the last few exchanges. When a user references something from 20 messages ago, the AI should remember it.
 
 ### Tasks in scope:
-1. Connect Drizzle to Supabase Postgres
-2. Replace `MemStorage` with a real DB-backed storage class
-3. Add anonymous session ID (stored in localStorage, sent as header)
-4. Scope all DB queries to the current session
-5. Fix spend tracking to use real token counts from API responses
-6. Verify existing smoke test still passes: create character → see story → quest updates
+1. Design a story summary schema (what gets summarized, how often, where it's stored)
+2. Create a summarization service that condenses older messages into narrative summaries
+3. Update `aiService.ts` to include the rolling summary in the system prompt
+4. Implement automatic summarization triggers (e.g., every 10 messages, or when context window fills)
+5. Ensure summaries capture: key plot points, NPC relationships, quest progress, player decisions
+6. Test that the AI can reference events from early in the adventure
 
 ### Out of scope for this milestone:
-- Any UI changes
-- Auth / user accounts
-- RAG or memory improvements
+- RAG / vector search (future milestone)
+- User accounts or cross-device persistence
+- UI changes
 - Brand redesign
+
+---
+
+## 9a. Completed Milestones
+
+### Milestone 1: Foundation — Real Persistence & Session Isolation ✅
+
+**What was built:**
+
+We replaced the in-memory storage (`MemStorage`) with a real PostgreSQL database via Supabase, and added session isolation so each browser gets its own independent game state.
+
+**Key changes:**
+
+1. **Database connection** (`server/db.ts`): Created a connection pool using `postgres` package with Drizzle ORM. Includes `testConnection()` that validates the DB is reachable on server startup.
+
+2. **Session isolation**: Added `sessionId` column to 5 tables: `characters`, `quests`, `items`, `messages`, `gameState`. All queries are now scoped by session ID.
+
+3. **DbStorage class** (`server/dbStorage.ts`): Implements the `IStorage` interface with real database queries. All CRUD operations include session scoping. Preserves business logic from MemStorage:
+   - Level-up calculation when XP increases
+   - Quest auto-complete when progress reaches max
+   - XP rewards on quest completion
+   - Duplicate quest prevention
+
+4. **Frontend session management**: Session ID is generated in `localStorage` on first visit (`main.tsx`) and sent with every API request via `x-session-id` header (`queryClient.ts`).
+
+5. **Real token cost tracking** (`server/spendTracker.ts`): Now captures actual `prompt_tokens` and `completion_tokens` from OpenRouter API responses. Calculates real costs using Claude 3.5 Haiku pricing ($0.0008/1K input, $0.004/1K output). Tracks per-session spend.
+
+6. **Admin dashboard**: Added `/api/admin/spend` and `/api/admin/sessions` endpoints (protected by `ADMIN_KEY`). Created `AdminDashboard.tsx` component at `/admin` route for monitoring costs.
+
+**Why it matters:**
+
+Before this milestone, all game data was lost on server restart and all users shared the same game state. Now each browser session has persistent, isolated data that survives deploys.
 
 ---
 
@@ -251,14 +286,18 @@ We are wiring the existing Drizzle schema to a real Supabase Postgres database a
 
 | File | What it does |
 |---|---|
-| `shared/schema.ts` | Database schema (Drizzle + Zod types). Source of truth for data models. |
-| `server/storage.ts` | All DB read/write operations. Currently in-memory — being replaced. |
-| `server/routes.ts` | All API endpoints. Thin handlers only. |
-| `server/aiService.ts` | All AI calls. Prompt construction, response parsing, action execution. |
-| `server/spendTracker.ts` | Daily cost limiter. Needs real token counting. |
+| `shared/schema.ts` | Database schema (Drizzle + Zod types). Source of truth for data models. All tables include `sessionId` for isolation. |
+| `server/db.ts` | Database connection pool (postgres-js + Drizzle). Exports `db` instance and `testConnection()`. |
+| `server/dbStorage.ts` | Production storage implementation. All CRUD operations with session scoping and business logic (level-ups, quest rewards). |
+| `server/storage.ts` | Exports `IStorage` interface and the active storage instance. `MemStorage` class still exists as backup but is unused. |
+| `server/routes.ts` | All API endpoints. Thin handlers only. Uses `getSessionId(req)` helper for session extraction. |
+| `server/aiService.ts` | All AI calls. Prompt construction, response parsing, action execution. Returns `tokenUsage` for cost tracking. |
+| `server/spendTracker.ts` | Real-time cost tracking with actual token counts. Tracks daily/all-time spend, per-session usage. Provides admin stats. |
 | `client/src/App.tsx` | View routing and top-level state. Gets complex — be careful here. |
+| `client/src/lib/queryClient.ts` | API request helpers. Adds `x-session-id` header to all requests. |
+| `client/src/components/AdminDashboard.tsx` | Internal admin UI at `/admin`. Shows spend metrics, session stats. Protected by admin key prompt. |
 | `client/src/lib/posthog.ts` | Analytics. Don't remove events — add to them. |
-| `.env.example` | All required env vars documented here. |
+| `.env.example` | All required env vars documented here. Includes `DATABASE_URL` and `ADMIN_KEY`. |
 
 ---
 
@@ -276,14 +315,17 @@ We are wiring the existing Drizzle schema to a real Supabase Postgres database a
 
 These exist in the codebase but are scheduled for removal. Do not build on top of them:
 
-- `components/examples/` — all 10 files, dead storybook code
-- `server/worker.ts` — dead Cloudflare Workers stub
-- `CombatInterface.tsx` — wrong product paradigm
+- `CombatInterface.tsx` — wrong product paradigm (combat routes still exist but are deprecated)
 - `CharacterCreation.tsx`, `CharacterQuestionnaire.tsx`, `AbilityScoreRoller.tsx` — D&D character creation, being replaced
 - `CampaignManager.tsx` — broken, being redesigned
-- The `users` table and auth stubs in schema/storage — dead code
+- The `users`, `enemies`, `campaigns` tables and related routes — dead code, not session-scoped
+- `MemStorage` class in `server/storage.ts` — kept as backup but unused; `DbStorage` is the active implementation
 
-Do not refactor or improve these files. They will be deleted.
+**Already deleted:**
+- `components/examples/` — removed (was dead storybook code)
+- `server/worker.ts` — removed (was dead Cloudflare Workers stub)
+
+Do not refactor or improve the files listed above. They will be deleted.
 
 ---
 

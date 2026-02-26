@@ -364,12 +364,19 @@ Example Quest Actions:
 
       const apiDuration = Date.now() - startTime;
 
+      // Log raw usage data from OpenRouter
+      console.log('[AI Service] Raw response.usage from OpenRouter:', JSON.stringify(response.usage));
+
       // Capture token usage from API response
       const tokenUsage: TokenUsage | undefined = response.usage ? {
         promptTokens: response.usage.prompt_tokens || 0,
         completionTokens: response.usage.completion_tokens || 0,
         totalTokens: response.usage.total_tokens || 0,
       } : undefined;
+
+      if (!response.usage) {
+        console.warn('[AI Service] WARNING: OpenRouter did not return usage data - cost tracking will use fallback estimate');
+      }
 
       console.log('[AI Service] API response received', {
         durationMs: apiDuration,

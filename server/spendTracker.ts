@@ -110,10 +110,11 @@ class SpendTracker {
       promptTokens = usage.promptTokens;
       completionTokens = usage.completionTokens;
     } else {
-      // Fallback estimate if no usage provided (~2000 tokens total)
-      cost = (1000 * this.INPUT_COST_PER_1K + 1000 * this.OUTPUT_COST_PER_1K);
-      promptTokens = 1000;
-      completionTokens = 1000;
+      // Fallback estimate if no usage provided (~2000 tokens total, realistic split)
+      promptTokens = 1500;
+      completionTokens = 500;
+      cost = this.calculateCost({ promptTokens, completionTokens, totalTokens: 2000 });
+      console.warn('[SpendTracker] No token usage provided, using fallback estimate');
     }
 
     // Update daily spend
