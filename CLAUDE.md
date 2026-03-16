@@ -246,28 +246,32 @@ Lavender:          #C9B6E4  ← secondary actions
 
 ## 9. Current Milestone
 
-**Milestone 5: Polish, Bugs & UX Overhaul**
+**Milestone 5: Polish, Bugs & UX Overhaul** (mostly complete)
 
-The core product pivot is complete — Story Mode is now a page-based interactive storytelling platform with a bookshelf, genre/length selection, and a Guide mascot. This milestone focuses on fixing bugs, tightening the UX, and making the experience feel polished before adding new features.
+The core product pivot is complete — Story Mode is now a page-based interactive storytelling platform with a bookshelf, AI-inferred genre, and a Guide mascot. This milestone focused on fixing bugs, tightening the UX, and making the experience feel polished.
 
-### Bugs to fix:
-1. **Story isolation bug** — Starting a new story sometimes pulls in AI context from a previous story. Likely a `storyId` scoping issue in `aiService.ts` or `getGameContext()`.
-2. **"End" button does nothing** — Tapping "End" on the story screen has no effect. Needs to properly end the story and return to bookshelf.
-3. **Narrator fallback error on story creation** — Intermittent: first AI response on a new story fails with "The narrator pauses, gathering their thoughts..." JSON parse failure. Regenerate works. Needs retry logic or better error recovery.
+### Bugs fixed: ✅
+1. **Story isolation bug** ✅ — Threaded `storyId` through `generateResponse()`, `getGameContext()`, and `checkAndTriggerSummarization()` in `aiService.ts`.
+2. **"End" button** ✅ — Now calls `PATCH /api/game-state` with `storyComplete: true` instead of deleting the story. Includes AlertDialog confirmation.
+3. **Narrator fallback error on story creation** — Still open. Intermittent: first AI response on a new story fails with JSON parse failure. Regenerate works. Needs retry logic or better error recovery.
 
-### UX improvements:
-4. **Story screen overhaul** — The reading experience is the core differentiator and needs to feel immersive:
-   - Remove persistent "Setting the scene / page X/X" progress bar from top
-   - Remove speech-to-text mic button (broken — doesn't request permissions, fires prematurely)
-   - Remove persistent text input box from bottom
-   - Add "I have something else in mind..." as a tap option alongside the AI's choices — tapping it reveals the text input + keyboard
-   - Add font size +/- controls somewhere accessible
-5. **Single-viewport screens** — All screens (bookshelf, story creation, story) should fit on one screen without scrolling on most mobile devices.
-6. **Remove emoji icons** — Emojis throughout the UI don't fit the brand direction. Replace with subtle iconography or remove entirely.
-7. **"Surprise me" button** — On the character description step (step 3 of story creation), add a button that auto-fills the text box with a randomly AI-generated character description.
+### UX improvements completed: ✅
+4. **Story screen overhaul** ✅ — Complete redesign:
+   - Removed progress bar, mic button, and persistent text input
+   - Consolidated into single top nav bar: "Story Mode" | "Page X of Y" | three-dot dropdown menu
+   - Menu contains: Back to Library, font size controls (+/-), End Story with confirmation
+   - Story choices moved from inline message bubbles to a collapsible bottom drawer
+   - Bottom drawer auto-expands on new choices, collapses on selection or outside tap
+   - "I have something else in mind..." option with expandable text input in the drawer
+   - Smart auto-scroll: AI messages scroll to top of new text, player messages scroll to bottom
+   - Font size persisted in localStorage (Small/Medium/Large/X-Large)
+5. **Remove emoji icons** ✅ — Stripped all decorative icons and emojis from Bookshelf, NewStoryCreation, ChatInterface, App, and ColdStartLoader. Only functional icons remain.
+6. **"Surprise me" button** ✅ — Calls `POST /api/story/surprise-me` for AI-generated character descriptions (Claude 3.5 Haiku, max_tokens: 150).
+7. **Genre step removed** ✅ — Story creation simplified from 3 steps to 2 (page count → character description). AI infers genre from the character description. Genre stored as "auto" in the database.
+8. **Info box → popover tooltip** ✅ — Replaced the character description info box with a small (i) icon popover.
 
 ### Needs discussion (not yet scoped):
-8. **The Guide AI character** — Currently appears as a mascot on the bookshelf with a greeting bubble. Open questions:
+9. **The Guide AI character** — Currently appears as a mascot on the bookshelf with a greeting bubble. Open questions:
    - Should the top-right icon be a menu? Or open a chat with The Guide?
    - Should The Guide be a real chatbot (delete account, explain how it works, resume old story, start new story)?
    - Naming: "The Guide" vs "The Librarian" vs "The Historian" — which fits the bookshelf/story brand?
@@ -295,7 +299,7 @@ Implemented rolling story summaries so the AI maintains full narrative context b
 
 Major pivot from D&D-style gameplay to a page-based interactive storytelling platform. Built:
 - **Bookshelf UI** (`Bookshelf.tsx`): Virtual bookshelf with color-coded book spines by genre, "Currently Reading" and "Finished" shelves, quick-continue card for most recent story.
-- **Story creation wizard** (`NewStoryCreation.tsx`): 3-step flow — genre selection (Fantasy, Mystery, Sci-Fi, Romance, Horror) → page count (25/50/100/250 pages with time estimates) → character description.
+- **Story creation wizard** (`NewStoryCreation.tsx`): Originally 3-step flow with genre selection, now simplified to 2 steps — page count → character description. AI infers genre from the description.
 - **Multi-story support**: Added `storyId` scoping across all tables. Each session can have multiple independent stories.
 - **Guide mascot** (`GuideAvatar`): Glowing orb character with personality, appears on bookshelf. AI system prompt rewritten as "The Guide — a warm, witty, and imaginative storyteller."
 - **New API routes**: `POST /api/story/new`, `GET /api/stories`, `DELETE /api/stories/:storyId`.
@@ -315,14 +319,15 @@ Added act-based pacing guidance so the AI shapes the narrative arc across the fu
 | `server/db.ts` | Database connection pool (postgres-js + Drizzle). Exports `db` instance and `testConnection()`. |
 | `server/dbStorage.ts` | Production storage implementation. All CRUD operations with session + story scoping and business logic (level-ups, quest rewards). |
 | `server/storage.ts` | Exports `IStorage` interface and the active storage instance. `MemStorage` class still exists as backup but is unused. |
-| `server/routes.ts` | All API endpoints. Thin handlers only. Includes story lifecycle routes (`/api/story/new`, `/api/stories`, `/api/stories/:storyId`). Uses `getSessionId(req)` helper. |
+| `server/routes.ts` | All API endpoints. Thin handlers only. Includes story lifecycle routes (`/api/story/new`, `/api/stories`, `/api/stories/:storyId`, `/api/story/surprise-me`). Uses `getSessionId(req)` helper. |
 | `server/aiService.ts` | All AI calls. Prompt construction with pacing guidance, rolling summary integration, response parsing, action execution. Returns `tokenUsage` for cost tracking. |
 | `server/summaryService.ts` | Rolling story summary generation. Condenses older messages into narrative summaries every 10 messages. |
 | `server/spendTracker.ts` | Real-time cost tracking with actual token counts. Tracks daily/all-time spend, per-session usage. Provides admin stats. |
-| `client/src/App.tsx` | 3-view routing (bookshelf → newStory → game) and top-level state. Complex — be careful here. |
+| `client/src/App.tsx` | 3-view routing (bookshelf → newStory → game) and top-level state. Game view delegates all UI to ChatInterface. Complex — be careful here. |
 | `client/src/components/Bookshelf.tsx` | Main landing screen. Virtual bookshelf with book spines, quick-continue card, GuideAvatar mascot. |
-| `client/src/components/NewStoryCreation.tsx` | 3-step story creation wizard: genre → page count → character description. |
-| `client/src/components/StoryProgress.tsx` | Page progress bar with pacing phase labels. Shown during story gameplay. |
+| `client/src/components/NewStoryCreation.tsx` | 2-step story creation wizard: page count → character description. Includes "Surprise me" AI character generator. |
+| `client/src/components/ChatInterface.tsx` | Story reading screen. Sticky nav bar, message display, collapsible bottom drawer for choices, font size controls, End Story confirmation. |
+| `client/src/components/StoryProgress.tsx` | Page progress bar with pacing phase labels. Not currently rendered (removed from game view) but kept for future repurposing. |
 | `client/src/lib/queryClient.ts` | API request helpers. Adds `x-session-id` header to all requests. |
 | `client/src/components/AdminDashboard.tsx` | Internal admin UI at `/admin`. Shows spend metrics, session stats. Protected by admin key prompt. |
 | `client/src/lib/posthog.ts` | Analytics. Don't remove events — add to them. |

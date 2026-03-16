@@ -4,28 +4,34 @@
 
 ## Session Date & Summary
 
-**Date:** March 16, 2026
+**Date:** March 16, 2026 (evening session)
 
 **What happened this session:**
-Shipped Milestones 3 and 5 back-to-back, plus multi-story support. The app went from a flat chat interface to a bookshelf-based story reader with page structure, pacing, and the ability to run multiple stories per session. Also cleaned up 15 dead component/hook files from the old UI.
+Completed most of Milestone 5 (Polish, Bugs & UX Overhaul). Fixed the two major bugs (story isolation, End button), then did a full UX overhaul of the story reading screen plus story creation flow simplification. Also packaged 23 Claude Code skills into a plugin for Cowork.
 
 **What we accomplished:**
-1. M3 (Page Structure): page-based story structure with AI pacing guidance, new story creation flow, progress tracking
-2. M5 (Bookshelf UI): replaced old start menu with bookshelf home screen, Guide avatar, genre-colored book spines, simplified App.tsx from 858→378 lines
-3. Multi-story support: story_id scoping across all tables, multiple books on bookshelf, per-story data isolation
-4. Cleanup: removed 15 dead components/hooks from old UI (CombatInterface, CharacterCreation, etc.)
+1. **Bug fixes:** Story isolation (storyId threading through aiService), End button (PATCH instead of DELETE, with AlertDialog confirmation)
+2. **Story screen overhaul:** Removed mic button, text input, progress bar. Added consolidated top nav with dropdown menu, page indicator, font size controls. Moved choices to collapsible bottom drawer. Added smart auto-scroll.
+3. **Icon/emoji cleanup:** Stripped all decorative icons and emojis from every screen for a cleaner literary feel.
+4. **"Surprise me" button:** New `POST /api/story/surprise-me` endpoint + frontend button for AI-generated character descriptions.
+5. **Genre step removed:** Simplified story creation from 3 steps to 2. AI infers genre from character description.
+6. **Tooltip fix:** Replaced info box with popover tooltip on character description.
+7. **Cowork plugin:** Packaged 23 relevant skills from Claude Code into `story-mode-plugin/skills/` for use in Cowork sessions.
 
 **Key decisions:**
-- M4 (The Guide) was partially absorbed — the Guide avatar appears on the bookshelf with contextual greetings, but the full "unified AI character across all contexts" is not yet implemented
-- Multi-story support was added as an extension of M5, not a separate milestone
+- Genre selection was removed entirely — AI infers genre from character description. Genre stored as "auto" in DB.
+- Story choices are now in a bottom drawer instead of inline in message bubbles. Messages show pure narrative text.
+- Single consolidated nav bar replaces the separate header in App.tsx and header in ChatInterface.
 
 ---
 
 ## Previous Sessions
 
+**March 16, 2026 (morning):** Shipped M3, M5, and multi-story support. App went from flat chat to bookshelf-based story reader with page structure, pacing, and multiple stories per session. Cleaned up 15 dead component/hook files.
+
 **March 15, 2026:** Major creative pivot. V2 brainstorm with Rachel — bookshelf metaphor, Guide character, page-based stories. Built interactive prototype. Revised milestone roadmap.
 
-**February 26, 2026:** Milestone 2 (Rolling Story Summary) — complete implementation committed (5e29dd7). `story_summaries` table, `summaryService.ts`, context injection in `aiService.ts`. Background summarization trigger every 10 messages. Code-complete, never live-tested.
+**February 26, 2026:** Milestone 2 (Rolling Story Summary) — complete implementation committed (5e29dd7). Never live-tested.
 
 ---
 
@@ -51,60 +57,34 @@ Full details in `STORY_MODE_V2_BRAINSTORM.md`. Core concepts:
 | 2 | AI Memory | ✅ Done (needs live test) | Rolling story summary | M1 |
 | 3 | Page Structure | ✅ Done | Fixed page counts, AI pacing, story completion | M2 |
 | 4 | The Guide | ⚠️ Partial | Guide avatar on bookshelf; full unified personality not yet implemented | M3 |
-| 5 | Bookshelf UI | ✅ Done | Bookshelf home screen, multi-story support, dead code cleanup | M4 |
+| 5 | Polish & UX | ✅ Mostly done | Bug fixes, story screen overhaul, icon cleanup, genre removal, surprise me | M4 |
 | 6 | Production | Not started | Error handling, monitoring, deploy | M5 |
 | 7 | Cross-Story Travel | Not started | Character persistence across stories | M5 + users |
 | 8 | Community Templates | Not started | Player-created content, voting, moderation | M7 + users |
 | 9 | Adaptive Theming | Not started | Genre influences visual design | M5 |
 
-### What's still open from earlier milestones:
+### What's still open:
 - **M2 (AI Memory):** Never live-tested. Needs a 15+ message playthrough to verify summarization triggers and recall.
 - **M4 (The Guide):** Guide avatar exists on bookshelf with greetings, but the full vision (unified AI personality as narrator in stories, librarian on shelf, concierge everywhere) is not yet wired into the AI system prompt or story responses.
+- **M5 remaining:** Narrator fallback error on story creation (intermittent JSON parse failure) still needs retry logic.
 
 ---
 
-## What Was Built (M3 + M5 + Multi-Story)
+## What Was Built Today (M5 UX Overhaul)
 
-### M3: Page Structure (ac2fcc6)
-- Added `totalPages`, `currentPage`, `storyLength` fields to schema
-- Migration `003_add_page_structure.sql` applied
-- AI system prompt includes page position and pacing guidance (setup → rising action → climax → resolution)
-- New Story API accepts genre + storyLength + characterDescription
-- New story creation UI and page progress bar (a65256b)
+### Bug Fixes
+- **Story isolation** (58c1155): `storyId` threaded through `generateResponse()`, `getGameContext()`, `checkAndTriggerSummarization()`, `updateGameState()` in `aiService.ts`. Storage calls in `dbStorage.ts` updated for `deactivateSummaries()`.
+- **End button** (6fed6d5): Changed from `DELETE /api/stories/:storyId` to `PATCH /api/game-state` with `storyComplete: true`. Fixed `storyId` scoping on the PATCH route.
 
-### M5: Bookshelf UI (2316b15)
-- `Bookshelf.tsx` — home screen with Guide avatar, wooden shelf, genre-colored book spines, contextual greeting
-- Simplified `App.tsx` from 858→378 lines: 3 views (bookshelf / newStory / game)
-- Removed old flows: welcome, startMenu, characterCreation, adventureTemplates, combat, demo tooltips, tab navigation
-- Bookshelf animations (bounce-slow, slide-up) and story-prose font
-
-### Multi-Story Support (8f6cd2c)
-- `story_id` column added to all data tables (migration `004_add_story_id.sql`)
-- All queries accept `x-story-id` header for scoping
-- `POST /api/story/new` generates unique storyId (no longer clears old data)
-- `GET /api/stories` lists all stories for a session
-- `DELETE /api/stories/:storyId` removes a specific story
-- Bookshelf renders multiple books, enter/exit story updates active storyId
-
-### Dead Code Cleanup (8a380be)
-- Removed 15 dead component/hook files from old UI
-
----
-
-## The Prototype
-
-**Location:** `story-mode-prototype.html` (also in project root as build artifact)
-**Source:** `/sessions/happy-sharp-albattani/story-mode-prototype/` (Cowork session artifact)
-
-The prototype demonstrates:
-- Bookshelf with wooden shelves, book spines, bookmarks, completion stars
-- The Guide character (animated wisp/orb with speech bubbles)
-- Story reading view with serif typography, page numbers, progress bar, animated choices
-- New Story flow (genre → length → character description)
-- Public Library (community templates with voting)
-- Pastel Playground color palette throughout
-
-This is a **visual reference**, not production code. The real implementation will be built into the existing React + Express codebase.
+### Story Screen Overhaul
+- **Removed** (8c923b8): Broken mic button (speech recognition), persistent text input, StoryProgress bar from game view.
+- **Page indicator** (4556fd5): Subtle "Page X of Y" / "Complete" in story header.
+- **Custom input** (2f1ce2a): "I have something else in mind..." option after AI choices, reveals text input + send button.
+- **Font size** (b5fc7b9): Settings gear → popover with +/- buttons, 4 sizes (14-20px), localStorage persistence.
+- **Icon cleanup** (77ad0a0): Stripped all decorative icons and emojis from all screens. Only functional icons remain.
+- **Surprise me** (157961d): `POST /api/story/surprise-me` endpoint (Claude 3.5 Haiku, 150 tokens). Button on character description step.
+- **Genre removal** (0494a33): Story creation simplified to 2 steps. AI infers genre. Schema accepts "auto" genre.
+- **Nav consolidation + bottom drawer + auto-scroll** (1e4a4e8): Single top nav bar with dropdown menu. Choices in collapsible bottom drawer. Smart auto-scroll per message type.
 
 ---
 
@@ -119,12 +99,18 @@ This is a **visual reference**, not production code. The real implementation wil
 
 ### AI Memory (M2) — built, needs live test:
 - `server/summaryService.ts` — Summarization service
-- `server/aiService.ts` — Context injection, background trigger, page pacing
+- `server/aiService.ts` — Context injection, background trigger, page pacing, storyId scoping
 
-### Bookshelf + Story UI (M3/M5) — shipped:
-- `client/src/components/Bookshelf.tsx` — Home screen with multi-story shelf
-- `client/src/App.tsx` — Simplified 3-view router (bookshelf / newStory / game)
-- `client/src/components/ChatInterface.tsx` — Minimal story reading header
+### Story Screen (M5 overhaul) — shipped:
+- `client/src/components/ChatInterface.tsx` — Full story reading screen: sticky nav bar with dropdown menu, message display (pure narrative, no inline choices), collapsible bottom drawer for choices, font size controls, End Story with AlertDialog, smart auto-scroll
+- `client/src/App.tsx` — Simplified game view, delegates all UI to ChatInterface (removed duplicate header)
+
+### Bookshelf + Story Creation — shipped:
+- `client/src/components/Bookshelf.tsx` — Home screen with bookshelf, cleaned of decorative icons
+- `client/src/components/NewStoryCreation.tsx` — 2-step wizard (page count → character description) with "Surprise me" button and info popover
+
+### Server routes:
+- `server/routes.ts` — Includes `POST /api/story/surprise-me`, updated `POST /api/story/new` (accepts "auto" genre, AI infers genre from character description)
 
 ### Already deleted (from 8a380be cleanup):
 - CombatInterface, CharacterCreation, CharacterQuestionnaire, AbilityScoreRoller, CampaignManager, and 10 other dead files
@@ -135,31 +121,35 @@ This is a **visual reference**, not production code. The real implementation wil
 
 ---
 
+## Recent Commits (this session)
+
+```
+1e4a4e8 feat: story screen UX overhaul — consolidated nav, bottom drawer choices, auto-scroll
+0494a33 feat: remove genre step, simplify story creation to 2-step flow
+157961d feat: add "Surprise me" button for AI-generated character descriptions
+77ad0a0 style: remove decorative icons and emojis from UI for cleaner literary feel
+b5fc7b9 feat: add font size controls behind settings icon on story screen
+2f1ce2a feat: add "I have something else in mind" custom input option to story choices
+4556fd5 feat: add subtle page indicator to story screen header
+8c923b8 fix: remove broken mic button, persistent text input, and progress bar from story screen
+6fed6d5 fix: End button marks story finished instead of deleting it
+58c1155 fix: thread storyId through AI service to fix story isolation bug
+```
+
+---
+
 ## The Next Thing To Do
 
-The next milestone depends on priorities. Here are the realistic options:
+### Remaining M5 work:
+- **Narrator fallback error** — Intermittent JSON parse failure on first AI response for new stories. Needs retry logic or better error recovery.
 
-### Option A: Finish M4 (The Guide) — unified AI personality
-The Guide avatar is on the bookshelf, but the AI doesn't yet have a consistent "Guide" personality wired into its system prompt. This would mean:
-- Define the Guide's voice, personality, and role in a system prompt constant
-- Inject Guide persona into story narration, bookshelf greetings, and new-story flow
-- Ensure the Guide feels like one character across all contexts
+### Then consider:
+- **Option A: Live-test M2 (AI Memory)** — Play through a 15+ message story to verify rolling summaries work end-to-end.
+- **Option B: Finish M4 (The Guide)** — Wire the Guide's personality into the AI system prompt for story narration, not just bookshelf greetings.
+- **Option C: M6 (Production Hardening)** — Error handling, rate limiting improvements, deploy pipeline.
+- **Option D: Bookshelf for "auto" genre** — Stories with genre "auto" show as generic on the bookshelf. Could have the AI return a genre tag in its first response and update the record.
 
-### Option B: M6 (Production Hardening)
-Get the app deploy-ready:
-- Error handling and recovery in all API routes
-- Monitoring and alerting (Sentry is partially set up)
-- Rate limiting on AI calls
-- Cost guardrails (spend caps per session)
-- Deploy pipeline validation on Render
-
-### Option C: M9 (Adaptive Theming)
-Genre-driven visual design — the story's genre/tone influences backgrounds, colors, and typography as the story progresses.
-
-### Option D: Live-test M2 (AI Memory)
-The rolling summary system has never been tested end-to-end. Before building more, it may be worth verifying it works with a real 15+ message playthrough.
-
-### Recommended order: D → A → B (test what's built, finish the Guide, then harden for production)
+### Recommended order: A → D → B → C
 
 ---
 
@@ -179,18 +169,7 @@ ADMIN_KEY             # Required for /api/admin/* endpoints
 - **Tables**: `characters`, `quests`, `items`, `messages`, `game_state`, `story_summaries`
 - **Applied migrations**: `001` (base), `002` (sessions), `003_add_page_structure`, `004_add_story_id`
 - **All tables have**: `session_id` and `story_id` columns for isolation
-
-### Recent commits:
-```
-8f6cd2c feat: multi-story support — multiple stories per session on bookshelf
-8a380be chore: remove 15 dead component/hook files from old UI
-2316b15 feat: M5 bookshelf UI — replace old start menu with clean mobile-first design
-1f8f349 chore: rename package from rest-express to story-mode
-a65256b feat: add new story creation UI and page progress bar
-ac2fcc6 feat: add page-based story structure (Milestone 3)
-2d95eb6 docs: update handoff for Milestone 2 completion
-5e29dd7 feat: add rolling story summary for AI memory (Milestone 2)
-```
+- **Genre column**: Now accepts "auto" for AI-inferred genre stories
 
 ---
 
@@ -206,4 +185,4 @@ ac2fcc6 feat: add page-based story structure (Milestone 3)
 
 ---
 
-*Last updated: March 16, 2026 by David + Claude (Cowork)*
+*Last updated: March 16, 2026 (evening) by David + Claude Code*
