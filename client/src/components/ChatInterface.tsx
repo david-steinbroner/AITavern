@@ -1,12 +1,10 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import PageHeader from "./PageHeader";
 import EmptyState from "./EmptyState";
-import { Mic, MicOff, Send, MessageSquare, Loader2, XCircle, Bug, AlertCircle, RefreshCw } from "lucide-react";
+import { MessageSquare, Loader2, XCircle, RefreshCw } from "lucide-react";
 import type { Message, Character, Quest, Item, GameState } from "@shared/schema";
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { analytics } from "@/lib/posthog";
 import { useToast } from "@/hooks/use-toast";
 import { captureError, addBreadcrumb } from "@/lib/sentry";
@@ -14,8 +12,6 @@ import { captureError, addBreadcrumb } from "@/lib/sentry";
 interface ChatInterfaceProps {
   messages: Message[];
   onSendMessage?: (content: string) => void;
-  isListening?: boolean;
-  onToggleListening?: () => void;
   isLoading?: boolean;
   className?: string;
   onEndAdventure?: () => void;
@@ -51,8 +47,6 @@ function parseMessageContent(content: string): { text: string; options: string[]
 export default function ChatInterface({
   messages,
   onSendMessage,
-  isListening = false,
-  onToggleListening,
   isLoading = false,
   className = "",
   onEndAdventure,
@@ -61,7 +55,6 @@ export default function ChatInterface({
   items = [],
   gameState
 }: ChatInterfaceProps) {
-  const [inputText, setInputText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -70,33 +63,6 @@ export default function ChatInterface({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
-  
-  const handleSend = () => {
-    if (inputText.trim()) {
-      console.log('[ChatInterface] Send message button clicked', {
-        messageLength: inputText.length
-      });
-      analytics.buttonClicked('Send Message', 'Chat Interface', {
-        message_length: inputText.length,
-        via: 'button'
-      });
-      analytics.messageSent('chat');
-      onSendMessage?.(inputText);
-      setInputText("");
-    }
-  };
-
-  const handleToggleListening = () => {
-    console.log('[ChatInterface] Voice toggle button clicked', {
-      wasListening: isListening,
-      nowListening: !isListening
-    });
-    analytics.buttonClicked('Toggle Voice', 'Chat Interface', {
-      was_listening: isListening,
-      now_listening: !isListening
-    });
-    onToggleListening?.();
-  };
 
   const handleCopyDebugInfo = () => {
     console.log('[ChatInterface] Copy Debug Info button clicked');
@@ -283,7 +249,7 @@ ${JSON.stringify(debugInfo, null, 2)}
   };
   
   return (
-    <div className={`h-full flex flex-col pb-20 ${className}`} data-testid="chat-interface">
+    <div className={`h-full flex flex-col ${className}`} data-testid="chat-interface">
       <Card className="flex-1 flex flex-col overflow-hidden">
         {/* Clean minimal header */}
         <div className="px-4 py-2.5 border-b flex items-center justify-between">
@@ -388,56 +354,6 @@ ${JSON.stringify(debugInfo, null, 2)}
             </div>
           </div>
 
-          {/* Text Input - Sticky at bottom on mobile */}
-          <div className="border-t border-border p-3 sm:p-4 bg-card">
-            <div className="flex items-center gap-2">
-              <Button
-                size="icon"
-                variant={isListening ? "destructive" : "secondary"}
-                onClick={handleToggleListening}
-                className="shrink-0 h-11 w-11"
-                data-testid="button-voice-toggle"
-              >
-                {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-              </Button>
-
-              <div className="flex-1 flex gap-2">
-                <input
-                  type="text"
-                  placeholder={isListening ? "Listening..." : "Type your message..."}
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === "Enter") {
-                      if (inputText.trim()) {
-                        console.log('[ChatInterface] Message sent via Enter key', {
-                          messageLength: inputText.length
-                        });
-                        analytics.buttonClicked('Send Message', 'Chat Interface', {
-                          message_length: inputText.length,
-                          via: 'enter_key'
-                        });
-                        analytics.messageSent('chat');
-                      }
-                      handleSend();
-                    }
-                  }}
-                  className="flex-1 px-3 py-2.5 bg-muted rounded-md text-sm sm:text-base text-foreground placeholder:text-muted-foreground border border-input focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
-                  disabled={isListening || isLoading}
-                  data-testid="input-chat-message"
-                />
-                <Button
-                  size="icon"
-                  onClick={handleSend}
-                  disabled={!inputText.trim() || isListening || isLoading}
-                  className="h-11 w-11"
-                  data-testid="button-send-message"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
       </Card>
     </div>
   );

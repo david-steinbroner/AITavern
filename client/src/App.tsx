@@ -12,7 +12,6 @@ import ChatInterface from "./components/ChatInterface";
 import ColdStartLoader from "./components/ColdStartLoader";
 import Bookshelf from "./components/Bookshelf";
 import NewStoryCreation from "./components/NewStoryCreation";
-import StoryProgress from "./components/StoryProgress";
 import ThemeToggle from "./components/ThemeToggle";
 import { useAnalytics, useSessionTracking } from "./hooks/useAnalytics";
 import { useToast } from "./hooks/use-toast";
@@ -26,7 +25,6 @@ type ViewType = "bookshelf" | "newStory" | "game";
 function GameApp() {
   const [currentView, setCurrentView] = useState<ViewType>("bookshelf");
   const [activeStoryId, setActiveStory] = useState<string | null>(null);
-  const [isListening, setIsListening] = useState(false);
   const [isCreatingStory, setIsCreatingStory] = useState(false);
 
   // Sync storyId to queryClient headers whenever it changes
@@ -221,16 +219,6 @@ function GameApp() {
     aiChatMutation.mutate(content);
   };
 
-  const handleToggleListening = () => {
-    setIsListening(!isListening);
-    if (!isListening) {
-      setTimeout(() => {
-        setIsListening(false);
-        handleSendMessage("I search for hidden passages behind the tapestries.");
-      }, 3000);
-    }
-  };
-
   const navigateToBookshelf = () => {
     setActiveStory(null);
     // Invalidate story-scoped queries so bookshelf shows fresh data
@@ -339,16 +327,8 @@ function GameApp() {
           </div>
         </div>
 
-        {/* Story progress + Chat */}
+        {/* Chat */}
         <main className="flex-1 overflow-hidden flex flex-col">
-          {gameState?.totalPages && gameState.totalPages > 0 && (
-            <StoryProgress
-              currentPage={gameState.currentPage || 0}
-              totalPages={gameState.totalPages}
-              genre={gameState.genre || undefined}
-              storyComplete={gameState.storyComplete || false}
-            />
-          )}
           {messagesLoading ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-muted-foreground">Loading story...</p>
@@ -357,8 +337,6 @@ function GameApp() {
             <ChatInterface
               messages={messages}
               onSendMessage={handleSendMessage}
-              isListening={isListening}
-              onToggleListening={handleToggleListening}
               isLoading={aiChatMutation.isPending}
               character={character}
               quests={quests}
