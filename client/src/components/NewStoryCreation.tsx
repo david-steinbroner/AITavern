@@ -4,10 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  ArrowLeft,
-  Loader2,
-} from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
 interface NewStoryCreationProps {
   onStartStory: (data: {
@@ -45,6 +43,7 @@ export default function NewStoryCreation({
   const [storyLength, setStoryLength] = useState<string>("");
   const [characterDescription, setCharacterDescription] = useState("");
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [isSurprising, setIsSurprising] = useState(false);
 
   const isValid =
     genre && storyLength && characterDescription.trim().length >= 5;
@@ -227,8 +226,36 @@ export default function NewStoryCreation({
                   className="text-base min-h-[140px] resize-none"
                   maxLength={1000}
                 />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Who are you in this story? What makes you interesting?</span>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    disabled={isSurprising || isLoading}
+                    onClick={async () => {
+                      setIsSurprising(true);
+                      try {
+                        const response = await apiRequest("POST", "/api/story/surprise-me", { genre });
+                        const data = await response.json();
+                        if (data.success && data.description) {
+                          setCharacterDescription(data.description);
+                        }
+                      } catch {
+                        // Silently fail — user can try again or type manually
+                      } finally {
+                        setIsSurprising(false);
+                      }
+                    }}
+                  >
+                    {isSurprising ? (
+                      <>
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        Thinking...
+                      </>
+                    ) : (
+                      "Surprise me"
+                    )}
+                  </Button>
                   <span
                     className={
                       characterDescription.length > 900 ? "text-amber-500" : ""

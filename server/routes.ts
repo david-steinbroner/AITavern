@@ -22,6 +22,7 @@ import { z } from "zod";
 import { aiLimiter, generalLimiter, strictLimiter } from "./rateLimit";
 import { spendTracker } from "./spendTracker";
 import { aiService, type AIResponse } from "./aiService";
+import OpenAI from "openai";
 
 // Validation schemas for updates
 const updateCharacterSchema = insertCharacterSchema.partial().refine(
@@ -557,6 +558,60 @@ Do NOT re-state the character description back to the reader. Instead, SHOW who 
     } catch (error) {
       console.error('Error getting story status:', error);
       res.status(500).json({ error: 'Failed to get story status' });
+    }
+  });
+
+  // V2: Generate a random character description for "Surprise me"
+  app.post("/api/story/surprise-me", aiLimiter, async (req, res) => {
+    try {
+      const sessionId = getSessionId(req);
+      const { genre } = req.body;
+
+      if (!genre || typeof genre !== "string") {
+        return res.status(400).json({ success: false, error: "genre is required" });
+      }
+
+      // Check spend limits
+      const spendCheck = spendTracker.canMakeRequest();
+      if (!spendCheck.allowed) {
+        return res.status(429).json({ success: false, error: spendCheck.reason });
+      }
+
+      const openai = new OpenAI({
+        apiKey: process.env.OPENROUTER_API_KEY || "sk-placeholder",
+        baseURL: "https://openrouter.ai/api/v1",
+        defaultHeaders: {
+          "HTTP-Referer": "https://storymode.onrender.com",
+          "X-Title": "Story Mode",
+        },
+      });
+
+      const response = await openai.chat.completions.create({
+        model: "anthropic/claude-3.5-haiku",
+        max_tokens: 150,
+        messages: [
+          {
+            role: "user",
+            content: `Generate a brief, creative character description (2-3 sentences) for someone about to start a ${genre} story. Be imaginative and specific — give them a unique personality, background, or situation. Don't use generic fantasy tropes. Write in second person ("You are...").`,
+          },
+        ],
+      });
+
+      const description = response.choices?.[0]?.message?.content?.trim() || "";
+
+      // Track token usage
+      if (response.usage) {
+        spendTracker.trackRequest(sessionId, {
+          promptTokens: response.usage.prompt_tokens,
+          completionTokens: response.usage.completion_tokens,
+          totalTokens: response.usage.total_tokens,
+        });
+      }
+
+      res.json({ success: true, description });
+    } catch (error) {
+      console.error("Error generating surprise character:", error);
+      res.status(500).json({ success: false, error: "Failed to generate character description" });
     }
   });
 
