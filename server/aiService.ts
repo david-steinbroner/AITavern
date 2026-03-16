@@ -43,91 +43,137 @@ export interface AIResponse {
 }
 
 export class TTRPGAIService {
+
+  /**
+   * Get pacing guidance based on where we are in the story.
+   * This tells the AI how to shape the narrative arc.
+   */
+  private getPacingGuidance(currentPage: number, totalPages: number): string {
+    if (!totalPages || totalPages === 0) return '';
+
+    const progress = currentPage / totalPages;
+    const pagesLeft = totalPages - currentPage;
+
+    // Final page
+    if (pagesLeft <= 1) {
+      return `\n\nSTORY PACING — FINAL PAGE:
+This is the LAST page of the story. You MUST bring everything to a satisfying conclusion.
+- Resolve the central conflict
+- Show the consequences of the player's choices throughout the story
+- End with a memorable closing image or moment
+- Do NOT present choices — instead, write a definitive ending
+- The ending should feel earned based on everything that came before`;
+    }
+
+    // Last 3 pages — resolution
+    if (pagesLeft <= 3) {
+      return `\n\nSTORY PACING — RESOLUTION (pages ${currentPage}/${totalPages}, ${pagesLeft} pages remaining):
+The story is ending very soon. Begin wrapping up:
+- Start resolving major plot threads
+- Present only 2 choices, each leading toward a distinct ending
+- Raise emotional stakes — consequences should feel weighty
+- No new major plot threads or characters`;
+    }
+
+    if (progress < 0.2) {
+      return `\n\nSTORY PACING — SETUP (page ${currentPage} of ${totalPages}):
+You are in the opening act. Focus on:
+- Establishing the world and atmosphere
+- Introducing the player's character in this setting
+- Planting seeds for the central conflict
+- Present 3-4 choices that establish the player's personality and approach`;
+    }
+
+    if (progress < 0.5) {
+      return `\n\nSTORY PACING — RISING ACTION (page ${currentPage} of ${totalPages}):
+The story is building. Focus on:
+- Deepening the central conflict — complications and twists
+- Developing relationships with key characters
+- Raising the stakes with each page
+- Present 3-4 choices with increasingly meaningful consequences`;
+    }
+
+    if (progress < 0.75) {
+      return `\n\nSTORY PACING — ESCALATION (page ${currentPage} of ${totalPages}):
+Approaching the climax. Focus on:
+- Major revelations or turning points
+- Forces converging — the player's choices start having visible consequences
+- Tension should be at its highest
+- Present 2-3 choices, each with clear and significant tradeoffs`;
+    }
+
+    // 75-90% — climax
+    return `\n\nSTORY PACING — CLIMAX (page ${currentPage} of ${totalPages}, ${pagesLeft} pages remaining):
+This is the peak of the story. Focus on:
+- The central confrontation or crisis
+- The player must make their most important choice
+- Everything built up should pay off here
+- Present 2-3 choices that will determine how the story ends`;
+  }
+
   private getSystemPrompt(gameState?: GameState): string {
     // Use custom world if generated from character, otherwise use default fantasy
     const worldSetting = gameState?.worldSetting || "a classic dark fantasy realm";
     const worldTheme = gameState?.worldTheme || "Dark fantasy with mystery and adventure";
     const worldDescription = gameState?.worldDescription || "A medieval fantasy world with magic, monsters, and intrigue where heroes forge their own legends";
 
-    return `You are an experienced Narrator running an immersive story-driven TTRPG.
+    // V2: Page-aware pacing
+    const currentPage = gameState?.currentPage || 0;
+    const totalPages = gameState?.totalPages || 0;
+    const pacingGuidance = this.getPacingGuidance(currentPage, totalPages);
+    const isPageBased = totalPages > 0;
 
-CORE ROLE:
-- Act as both the Narrator and all characters the player encounters
-- Create engaging, immersive storylines with rich world-building
-- Respond to player actions with appropriate consequences
-- Maintain game balance and progression
-- Generate dynamic quests and adventures
+    return `You are the Guide — a warm, witty, and imaginative storyteller. You are the narrator of interactive stories where the reader makes choices that shape what happens next.
 
-GAME WORLD:
+YOUR PERSONALITY:
+- Warm and encouraging, like a favorite bookshop owner who loves stories
+- Slightly playful — you enjoy surprising the reader
+- You speak directly to the reader in second person ("You step into the market...")
+- You never break character as the narrator unless the story itself is meta
+- You are NOT a game master or dungeon master — you are a storyteller
+
+THE WORLD:
 ${worldDescription}
 
-WORLD THEME: ${worldTheme}
+GENRE/TONE: ${worldTheme}
 SETTING: ${worldSetting}
 
-IMPORTANT: Stay true to this world's unique vibe and tone in ALL responses. Every NPC, location, quest, and item should feel authentic to this setting.
+STAY TRUE to this world's unique vibe. Every character, location, and event should feel authentic to this setting.
 
 NARRATIVE GUIDELINES:
-- Rich, descriptive environments that paint vivid mental pictures
-- Diverse characters with distinct personalities, motivations, and secrets
-- Atmospheric details: weather, sounds, smells, lighting - all matching the world's theme
+- Write in vivid, literary prose — this should feel like reading a book
+- Use sensory details: what does the reader see, hear, smell, feel?
+- Characters should have distinct voices and motivations
+- Each page should end at a moment of tension or decision
+- Keep each response to 150-250 words of narrative (concise but immersive)
+${isPageBased ? `\nThis is a ${totalPages}-page story. Each of your responses is one page.` : ''}
+${pacingGuidance}
 
-NARRATIVE STRUCTURE - VERY IMPORTANT:
-Every response MUST follow this structure:
+RESPONSE STRUCTURE:
+Every response MUST include:
 
-1. **World Description (2-3 sentences)**: Paint the scene with sensory details
-   - What does the player see, hear, smell?
-   - What's the atmosphere and mood?
-   - What environmental details stand out?
+1. **Narrative** (150-250 words): Rich, atmospheric prose advancing the story based on the reader's choice. Write like a novelist, not a game manual.
 
-2. **Story Event/NPC Interaction**: What happens as a result of player's action
-   - NPC dialogue (if applicable)
-   - Consequences of actions
-   - New information revealed
-
-3. **Player Options (ALWAYS INCLUDE)**: Present 2-4 clear choices
-   Format as:
+2. **Choices** (ALWAYS INCLUDE unless this is the final page):
+   Present 2-4 options formatted as:
 
    **What do you do?**
-   • Option 1: [Clear, specific action]
-   • Option 2: [Clear, specific action]
-   • Option 3: [Clear, specific action]
-   • Option 4: [Optional - creative/risky action]
+   • Option A: [Specific, evocative action]
+   • Option B: [Specific, evocative action]
+   • Option C: [Specific, evocative action]
 
-QUEST TRACKING PROTOCOL - MANDATORY:
-YOU MUST check EVERY SINGLE player action against ALL active quests. This is NON-NEGOTIABLE.
+   Make each choice feel meaningfully different — not just "go left" vs "go right" but choices that reveal character and change the story's direction.
 
-Before EVERY response:
-1. Review ALL active quests (even if they seem unrelated)
-2. Be GENEROUS with progress - if action is remotely related, give credit
-3. Don't require exact matches - interpret player intent
-4. If a quest is stuck at 0 progress for 3+ player actions, advance it anyway
-
-QUEST PROGRESSION RULES (ENFORCED):
-For EVERY player action that relates to ANY quest:
-1. MUST include updateQuest in actions object
-2. Increment progress by 1 (or more if major milestone)
-3. If progress >= maxProgress, set status to "completed"
-4. Award experience when updating progress
-5. Generate follow-up quests when main story quests complete
-6. Update quest descriptions if new information is revealed
-
-ANTI-STUCK RULE:
-If you notice a quest has been at the same progress for multiple turns, FORCE progress.
-Better to advance too generously than leave players feeling stuck.
-
-COMBAT MANAGEMENT:
-- Handle turn-based combat with strategic AI enemy behavior
-- Calculate damage based on character stats and enemy abilities
-- Create dynamic encounters that scale with player level
-- End combat when appropriate and award experience/rewards
+QUEST TRACKING:
+- Check player actions against active quests
+- If an action advances a quest, update progress
+- Be generous — interpret player intent
+- Generate follow-up quests when story arcs complete
 
 CHARACTER PROGRESSION:
-- Award experience for completing quest objectives
-- Award experience for creative problem-solving
-- Suggest level-ups when XP thresholds are reached
-- Give items as quest rewards or from defeated enemies
-
-Remember: Keep responses engaging but focused. Always give players clear options. Always track quest progress.`;
+- Award experience for meaningful story moments
+- Give items as narrative rewards (discoveries, gifts, trades)
+- Keep progression feeling natural, not game-like`;
   }
 
   private async getGameContext(sessionId: string): Promise<{
@@ -225,6 +271,14 @@ Remember: Keep responses engaging but focused. Always give players clear options
       prompt += `SCENE: ${gameState.currentScene}\\n`;
       if (gameState.inCombat) {
         prompt += `IN COMBAT - Turn: ${gameState.currentTurn}\\n`;
+      }
+      // V2: Page tracking
+      if (gameState.totalPages && gameState.totalPages > 0) {
+        const nextPage = (gameState.currentPage || 0) + 1;
+        prompt += `PAGE: ${nextPage} of ${gameState.totalPages}\\n`;
+        if (gameState.genre) {
+          prompt += `GENRE: ${gameState.genre}\\n`;
+        }
       }
       prompt += "\\n";
     }
@@ -407,13 +461,13 @@ PLAYER ACTION: ${playerMessage}
 
 RESPONSE REQUIREMENTS:
 
-1. **Narrative Structure**: Follow the 3-part structure (World Description → Event/Interaction → Player Options)
+1. **Narrative**: Write 150-250 words of vivid, literary prose. Then present 2-4 choices.
 
-2. **Player Options**: ALWAYS end with bullet-pointed choices like:
+2. **Choices**: ALWAYS end with options (unless final page):
    **What do you do?**
-   • Option 1: Clear action
-   • Option 2: Clear action
-   • Option 3: Clear action
+   • Option A: [Evocative, meaningful action]
+   • Option B: [Evocative, meaningful action]
+   • Option C: [Evocative, meaningful action]
 
 3. **Quest Tracking**: Check if this action relates to active quests and update accordingly
 
@@ -613,12 +667,40 @@ Example Quest Actions:
 
       // Validate and sanitize the response
       const finalResponse: AIResponse = {
-        content: aiResponse.content || "The DM pauses, considering your words...",
+        content: aiResponse.content || "The Guide pauses, considering your words...",
         sender: aiResponse.sender === 'npc' ? 'npc' as const : 'dm' as const,
         senderName: aiResponse.sender === 'npc' ? aiResponse.senderName : null,
         tokenUsage,
         actions: aiResponse.actions || undefined
       };
+
+      // V2: Increment page count if this is a page-based story
+      if (context.gameState?.totalPages && context.gameState.totalPages > 0) {
+        const newPage = (context.gameState.currentPage || 0) + 1;
+        const isComplete = newPage >= context.gameState.totalPages;
+
+        console.log('[AI Service] Page increment', {
+          currentPage: newPage,
+          totalPages: context.gameState.totalPages,
+          isComplete,
+        });
+
+        // Update game state with new page count
+        await storage.updateGameState(sessionId, {
+          currentPage: newPage,
+          storyComplete: isComplete,
+        });
+
+        // Inject page info into actions so the frontend knows
+        if (!finalResponse.actions) {
+          finalResponse.actions = {};
+        }
+        finalResponse.actions.updateGameState = {
+          ...finalResponse.actions.updateGameState,
+          currentPage: newPage,
+          storyComplete: isComplete,
+        };
+      }
 
       const totalDuration = Date.now() - startTime;
       console.log('[AI Service] Response generation complete', {

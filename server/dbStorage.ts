@@ -625,6 +625,13 @@ export class DbStorage implements IStorage {
           worldTheme: null,
           worldDescription: null,
           generatedFromCharacter: false,
+          // V2: Reset page structure
+          totalPages: null,
+          currentPage: 0,
+          storyLength: null,
+          genre: null,
+          characterDescription: null,
+          storyComplete: false,
         });
       }
     } catch (error) {

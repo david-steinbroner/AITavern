@@ -134,6 +134,14 @@ export const gameState = pgTable("game_state", {
   worldTheme: text("world_theme"), // Tone/genre description
   worldDescription: text("world_description"), // AI-generated world summary
   generatedFromCharacter: boolean("generated_from_character").default(false).notNull(),
+
+  // V2: Page-based story structure
+  totalPages: integer("total_pages"), // null = legacy unlimited story
+  currentPage: integer("current_page").default(0).notNull(),
+  storyLength: text("story_length"), // 'short' (25), 'novella' (50), 'novel' (100), 'epic' (250)
+  genre: text("genre"), // 'fantasy', 'mystery', 'scifi', 'romance', 'horror'
+  characterDescription: text("character_description"), // Plain-text character description (V2 style)
+  storyComplete: boolean("story_complete").default(false).notNull(),
 });
 
 // Create schemas

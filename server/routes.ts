@@ -402,6 +402,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================
+  // V2: NEW STORY (page-based)
+  // ============================================================
+
+  const newStorySchema = z.object({
+    genre: z.enum(['fantasy', 'mystery', 'scifi', 'romance', 'horror']),
+    storyLength: z.enum(['short', 'novella', 'novel', 'epic']),
+    characterDescription: z.string().min(5).max(1000),
+  });
+
+  const STORY_LENGTH_PAGES: Record<string, number> = {
+    short: 25,
+    novella: 50,
+    novel: 100,
+    epic: 250,
+  };
+
+  app.post("/api/story/new", aiLimiter, async (req, res) => {
+    try {
+      const sessionId = getSessionId(req);
+      const result = newStorySchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: "Invalid story data", details: result.error.errors });
+      }
+
+      const { genre, storyLength, characterDescription } = result.data;
+      const totalPages = STORY_LENGTH_PAGES[storyLength];
+
+      // Clear any existing adventure data for a fresh start
+      await storage.clearAllAdventureData(sessionId);
+
+      // Create a lightweight character from the description
+      const character = await storage.createCharacter({
+        sessionId,
+        name: 'Protagonist', // AI will establish the real name from description
+        class: genre, // Repurposing class field for genre (temporary until schema cleanup)
+        level: 1,
+        experience: 0,
+        appearance: characterDescription,
+        backstory: characterDescription,
+        strength: 10, dexterity: 10, constitution: 10,
+        intelligence: 10, wisdom: 10, charisma: 10,
+        currentHealth: 100, maxHealth: 100,
+        currentMana: 0, maxMana: 0,
+      });
+
+      // Create game state with page tracking
+      const state = await storage.createGameState({
+        sessionId,
+        currentScene: `Opening — a new ${genre} story begins`,
+        inCombat: false,
+        currentTurn: null,
+        turnCount: 0,
+        totalPages,
+        currentPage: 0,
+        storyLength,
+        genre,
+        characterDescription,
+        storyComplete: false,
+        generatedFromCharacter: true,
+      });
+
+      // Generate the first page via AI
+      const firstPagePrompt = `Begin a new ${totalPages}-page ${genre} story. The reader describes themselves as: "${characterDescription}"
+
+Your job: Create the opening page. Establish the world, introduce the reader's character within it, and end with the first set of choices. This is page 1 of ${totalPages} — focus on setup and atmosphere. Make the reader want to turn the page.
+
+Do NOT re-state the character description back to the reader. Instead, SHOW who they are through the opening scene.`;
+
+      const aiResponse = await aiService.generateResponse(sessionId, firstPagePrompt);
+
+      // Track token spend
+      if (aiResponse.tokenUsage) {
+        spendTracker.trackRequest(sessionId, aiResponse.tokenUsage);
+      }
+
+      // Save the AI's first page and apply any actions (quests, items, etc.)
+      const firstMessage = await applyAIResponse(sessionId, `[New story: ${genre}, ${storyLength}] ${characterDescription}`, aiResponse);
+
+      res.json({
+        success: true,
+        story: {
+          genre,
+          storyLength,
+          totalPages,
+          currentPage: 1,
+          characterDescription,
+        },
+        firstPage: aiResponse.content,
+        message: firstMessage,
+        gameState: await storage.getGameState(sessionId),
+      });
+    } catch (error) {
+      console.error('Error creating new story:', error);
+      res.status(500).json({ error: 'Failed to create story' });
+    }
+  });
+
+  // V2: Get current story status
+  app.get("/api/story/status", async (req, res) => {
+    try {
+      const sessionId = getSessionId(req);
+      const state = await storage.getGameState(sessionId);
+
+      if (!state || !state.totalPages) {
+        return res.json({ success: true, hasStory: false });
+      }
+
+      res.json({
+        success: true,
+        hasStory: true,
+        genre: state.genre,
+        storyLength: state.storyLength,
+        totalPages: state.totalPages,
+        currentPage: state.currentPage,
+        storyComplete: state.storyComplete,
+        characterDescription: state.characterDescription,
+      });
+    } catch (error) {
+      console.error('Error getting story status:', error);
+      res.status(500).json({ error: 'Failed to get story status' });
+    }
+  });
+
+  // ============================================================
+  // LEGACY: Adventure template initialization
+  // ============================================================
+
   app.post("/api/adventure/initialize", async (req, res) => {
     try {
       const sessionId = getSessionId(req);

@@ -4,210 +4,185 @@
 
 ## Session Date & Summary
 
-**Date:** February 26, 2026
+**Date:** March 15, 2026
 
-**What we set out to do:**
-Implement Milestone 2: AI Memory — Rolling Story Summary. The AI was only seeing the last 5 messages and "forgetting" earlier plot events, NPC names, and player decisions.
+**What happened this session:**
+Major creative pivot. David and Rachel brainstormed a new vision for Story Mode V2 — a storybook/bookshelf metaphor with a persistent AI Guide character, page-based story structure, and community features. Built an interactive prototype of the new UI. Revised the entire milestone roadmap to align with this new direction.
 
 **What we accomplished:**
-Milestone 2 core implementation is complete and committed (5e29dd7). Built the entire rolling story summary system: database table, summarization service, AI context injection, and background trigger logic.
+1. Captured all V2 brainstorm ideas in `STORY_MODE_V2_BRAINSTORM.md`
+2. Built a full interactive prototype (`story-mode-prototype.html`) with four views: bookshelf, story reading, new story creation, public library
+3. Revised the milestone roadmap (see below)
+
+**Key decision:** This is a pivot in the presentation and interaction layer, NOT the foundation. All Milestone 1 (DB, sessions) and Milestone 2 (AI memory) work still applies.
 
 ---
 
-## What Was Just Built
+## Previous Session (February 26, 2026)
 
-### Files Created/Modified This Session:
+**What was built:**
+- Milestone 2: Rolling Story Summary — complete implementation committed (5e29dd7)
+- `story_summaries` table, `summaryService.ts`, context injection in `aiService.ts`
+- Background summarization trigger every 10 messages (fire-and-forget)
 
-#### `shared/schema.ts`
-- **Added `storySummaries` table** with session scoping, matching the pattern of all other tables
-- Fields: `id`, `sessionId`, `summaryText`, `messageStartIndex`, `messageEndIndex`, `messageCount`, `summaryTokenCount`, `createdAt`, `isActive`
-- Added Zod schemas (`insertStorySummarySchema`) and TypeScript types (`StorySummary`, `InsertStorySummary`)
-
-#### `server/summaryService.ts` (NEW FILE)
-- **`generateStorySummary(sessionId, messages, previousSummary?)`** — Main function that calls Claude 3.5 Haiku to condense messages into narrative summary
-- Uses same OpenRouter setup as aiService.ts
-- Handles previous summary incorporation (weaves old + new into cohesive narrative)
-- Tracks costs via `spendTracker.trackRequest()`
-- Returns `{ summaryText, tokenUsage, error? }`
-- System prompt instructs AI to preserve: plot points, NPC names/relationships, quest progress, player decisions, locations, character development
-- System prompt instructs AI to exclude: stats, quest lists, inventory, exact dialogue
-- Target output: ~400 words (~600 tokens)
-
-#### `server/dbStorage.ts`
-- **`getActiveSummary(sessionId)`** — Returns the current active summary (where `isActive = true`)
-- **`createSummary(sessionId, summary)`** — Inserts new summary with `isActive = true`
-- **`deactivateSummaries(sessionId)`** — Marks all summaries for session as `isActive = false`
-- **Updated `clearAllAdventureData()`** — Now also clears `storySummaries` table
-
-#### `server/storage.ts`
-- Added interface methods to `IStorage`: `getActiveSummary`, `createSummary`, `deactivateSummaries`
-- Added stub implementations to `MemStorage` (backup class)
-
-#### `server/aiService.ts`
-- **Added constants**: `SUMMARY_THRESHOLD = 10`, `RECENT_MESSAGE_WINDOW = 5`
-- **Updated `getGameContext()`** — Now also fetches `storySummary` via `storage.getActiveSummary()`
-- **Updated `createContextPrompt()`** — Injects "STORY SO FAR" section between game state and recent messages (only if summary exists)
-- **Added `checkAndTriggerSummarization()`** — Private method that:
-  1. Counts total messages and gets current summary
-  2. Calculates unsummarized count
-  3. If >= 10 unsummarized, triggers summarization
-  4. Deactivates old summaries, creates new one
-  5. Wrapped in try/catch — failures don't block response
-- **Called as fire-and-forget** — `this.checkAndTriggerSummarization(sessionId).catch(...)` runs in background, doesn't block user's story response
-- **Fixed stale headers** — Changed "AI Tavern" → "Story Mode" in HTTP-Referer and X-Title
-
-#### Also fixed in `server/summaryService.ts`:
-- Headers updated to "Story Mode" branding
+**Status:** Code-complete, never live-tested. Still needs a real 15+ message playthrough to verify.
 
 ---
 
-## Key Design Decisions Made This Session
+## The V2 Vision (Summary)
 
-### 1. New table vs column on gameState
-**Chosen:** New `story_summaries` table
+Full details in `STORY_MODE_V2_BRAINSTORM.md`. Core concepts:
 
-**Why:** Summaries can grow large (500-1500 tokens). Separate table enables keeping historical summaries for debugging (`isActive = false`), clean separation of concerns, and metadata tracking (message range, token count).
-
-### 2. Single rolling summary vs chained summaries
-**Chosen:** Single rolling summary per session that gets replaced
-
-**Why:** Simpler implementation, lower token cost. Each new summary incorporates the previous one and covers all messages up to the recent window.
-
-### 3. Summarization trigger threshold
-**Chosen:** Every 10 unsummarized messages
-
-**Why:** Balances cost (~$0.003 per summarization) with context freshness. Too frequent = expensive. Too infrequent = stale summaries.
-
-### 4. Keep historical summaries
-**Chosen:** Old summaries marked `isActive = false`, not deleted
-
-**Why:** Useful for debugging and auditing. Can see how summaries evolved over an adventure. Storage cost is negligible.
-
-### 5. Non-blocking (fire-and-forget) summarization
-**Chosen:** Summarization runs in background, doesn't block story response
-
-**Why:** Avoids 1-2 second latency spike every 10 messages. Trade-off: new summary available for NEXT response, not current one. Acceptable because the user still gets their response immediately.
+1. **Bookshelf UI** — Home screen is a bookshelf. Each story is a physical book you pull off the shelf to read.
+2. **The Guide** — A persistent AI character (friendly wisp/orb) that's the librarian on the shelf, the narrator in stories, and the concierge everywhere else. One voice, one personality, across the whole app.
+3. **Page-based stories** — Stories have fixed page counts (25, 50, 100, 250). One page = one AI reply. Enables pacing, cost control, progress tracking, and the concept of a "finished" story.
+4. **Cross-story character travel** — Finish a story, carry your character into a new one. Break the 4th wall.
+5. **Community templates** — Player-created worlds/characters can be nominated and voted on to become templates for others.
+6. **Adaptive visual theming** — Story genre/tone influences the visual design (backgrounds, colors) as the story develops.
 
 ---
 
-## Current State of the App
+## Revised Milestone Roadmap
 
-### What works right now (`npm run dev`):
+| # | Milestone | Status | What It Is | Depends On |
+|---|-----------|--------|------------|------------|
+| 0 | Local Dev | ✅ Done | Repo runs locally | — |
+| 1 | Foundation | ✅ Done | DB persistence, session isolation | — |
+| 2 | AI Memory | ✅ Built (needs testing) | Rolling story summary | M1 |
+| **3** | **Page Structure** | **Not started** | **Fixed page counts, AI pacing awareness, story completion** | **M2** |
+| **4** | **The Guide** | **Not started** | **Unified AI character across all app contexts** | **M3** |
+| **5** | **Bookshelf UI** | **Not started** | **Replace flat UI with bookshelf metaphor (prototype exists)** | **M4** |
+| 6 | Production | Not started | Error handling, monitoring, deploy | M5 |
+| 7 | Cross-Story Travel | Not started | Character persistence across stories | M5 + users |
+| 8 | Community Templates | Not started | Player-created content, voting, moderation | M7 + users |
+| 9 | Adaptive Theming | Not started | Genre influences visual design | M5 |
 
-1. **Everything from Milestone 1** — Session persistence, isolation, character creation, chat, quests, inventory
-2. **Rolling story summary** — After 15 messages, the AI will have a summary of messages 1-10 injected into its context
-3. **Admin dashboard** — `/admin` shows spend metrics including summarization costs
-
-### Smoke test for Milestone 2:
-1. Start a new adventure (clear localStorage to get fresh session)
-2. Send 15+ messages back and forth with the AI
-3. Watch server logs for:
-   - `[AI Service] Triggering summarization`
-   - `[SummaryService] Summary generated successfully`
-   - `[AI Service] Summary created successfully`
-4. On message 16+, logs should show `hasSummary: true`
-5. Reference something from message 2-3 in your message 20 — AI should remember it
-
----
-
-## What Still Needs Doing for Milestone 2
-
-### Testing & Tuning:
-- [ ] Live testing with a real 15+ message adventure to verify summarization triggers correctly
-- [ ] Verify the AI actually references earlier events when prompted
-- [ ] May need to tune: summary quality (prompt tweaks), trigger threshold (10 might be too frequent/infrequent), recent message window size (5 might be too small)
-
-### Nice to have:
-- [ ] Add summary info to admin dashboard (how many summaries exist, total token costs for summaries)
-- [ ] Add a way to manually trigger re-summarization if summary quality is poor
+### Old milestones → new mapping:
+- Old M3 (Brand Redesign) → **absorbed into new M5 (Bookshelf UI)**. The redesign happens because of a better interaction model, not just new colors.
+- Old M5 (World Generation) → **absorbed into new M3 (Page Structure)**. World gen is part of the "New Story" flow now.
 
 ---
 
-## Exact State of Every Milestone
+## Milestone 3: Page Structure (NEXT)
 
-| Milestone | Status | Description |
-|-----------|--------|-------------|
-| 0. Local Dev | ✅ Done | Repo runs locally with npm run dev |
-| 1. Foundation | ✅ Done | Real DB persistence, session isolation |
-| 2. AI Memory | ✅ Done (needs testing) | Rolling story summary |
-| 3. Brand Redesign | Not started | Pastel Playground UI (frontend only) |
-| 4. Production | Not started | Error handling, monitoring, deploy |
-| 5. World Generation | Not started | AI builds worlds from character backstory |
+This is the keystone feature. Everything else depends on it.
 
-### Milestone 2: AI Memory — Rolling Story Summary ✅
-**Core implementation complete.** Committed as `5e29dd7`.
+### What needs to happen:
 
-What was built:
-- `story_summaries` table with session scoping
-- `summaryService.ts` with AI-powered summarization
-- Context injection in `aiService.ts`
-- Background trigger every 10 messages
-- Non-blocking (fire-and-forget) execution
+**Schema changes:**
+- Add `totalPages` (integer) and `currentPage` (integer) to the story/game state
+- Add `storyLength` tier enum or field: 'short' (25), 'novella' (50), 'novel' (100), 'epic' (250)
+- Each AI reply increments `currentPage`
+- Story is "complete" when `currentPage >= totalPages`
 
-What remains:
-- Live testing with real conversations
-- Tuning summary quality and trigger thresholds
+**AI prompt changes:**
+- System prompt now includes: "You are writing page {current} of {total}."
+- Pacing guidance injected based on position in story:
+  - Pages 1-20%: Setup, world-building, character introduction
+  - Pages 20-50%: Rising action, complications, relationships deepen
+  - Pages 50-75%: Escalation, stakes increase, plot twists
+  - Pages 75-90%: Climax, confrontation, peak tension
+  - Pages 90-100%: Resolution, consequences, ending
+- Final page prompt: "This is the last page. Bring the story to a satisfying conclusion."
+- Number of choices may reduce near the end (funnel toward resolution)
+
+**New Story flow:**
+- User picks genre, story length, describes character
+- AI generates opening page (world, setting, first scene, first choices)
+- This replaces the old character creation → world generation as separate steps
+
+**Story completion:**
+- When `currentPage >= totalPages`, the story is marked complete
+- The Guide acknowledges the ending
+- Player can: start a new story, re-read the finished book, (later) carry character forward
+
+### What stays the same:
+- Database layer (Supabase + Drizzle)
+- Session isolation pattern
+- Rolling summary system (even more important now for pacing)
+- Message storage (each page is still a message pair)
 
 ---
 
-## Next Milestones
+## The Prototype
 
-### Milestone 3: Brand Redesign (Pastel Playground UI)
-**Frontend only.** Apply the Pastel Playground color palette from CLAUDE.md:
-- Cream background (#FFF9F0)
-- Soft indigo text (#6C7A89)
-- Peachy pink CTAs (#FFB6B9)
-- Mint green success (#A8E6CF)
-- Lavender secondary (#C9B6E4)
+**Location:** `story-mode-prototype.html` (also in project root as build artifact)
+**Source:** `/sessions/happy-sharp-albattani/story-mode-prototype/` (Cowork session artifact)
 
-No pure black, no dark mode, mobile-first design.
+The prototype demonstrates:
+- Bookshelf with wooden shelves, book spines, bookmarks, completion stars
+- The Guide character (animated wisp/orb with speech bubbles)
+- Story reading view with serif typography, page numbers, progress bar, animated choices
+- New Story flow (genre → length → character description)
+- Public Library (community templates with voting)
+- Pastel Playground color palette throughout
 
-### Milestone 4: Production Deployment
-Error handling improvements, monitoring dashboards, Render deployment optimization.
+This is a **visual reference**, not production code. The real implementation will be built into the existing React + Express codebase.
 
-### Milestone 5: World Generation (NEW)
-AI builds tonally matched worlds from character backstory. Universal tavern pattern — every story starts in that world's version of a gathering place. Heavy prompt engineering focus. **Depends on Milestone 2** (AI needs memory to maintain world consistency).
+---
+
+## Exact State of Every File Area
+
+### Foundation (M1) — solid, no changes needed:
+- `server/db.ts` — DB connection pool
+- `server/dbStorage.ts` — All CRUD with session scoping
+- `server/storage.ts` — IStorage interface
+- `shared/schema.ts` — Drizzle schema (will need additions for M3)
+- `client/src/lib/queryClient.ts` — Session ID header injection
+
+### AI Memory (M2) — built, needs live test:
+- `server/summaryService.ts` — Summarization service
+- `server/aiService.ts` — Context injection, background trigger
+- `shared/schema.ts` — `storySummaries` table
+
+### Scheduled for deletion (unchanged from before):
+- `CombatInterface.tsx`, `CharacterCreation.tsx`, `CharacterQuestionnaire.tsx`, `AbilityScoreRoller.tsx`
+- `CampaignManager.tsx`
+- `users`, `enemies`, `campaigns` tables
+- `MemStorage` class
 
 ---
 
 ## The Next Thing To Do
 
-**Ready-to-paste Claude Code prompt for the next session:**
+**Step 1: Test Milestone 2 (AI Memory)**
+
+Before building anything new, verify the rolling summary system actually works:
 
 ```
 Read HANDOFF.md and CLAUDE.md in full before doing anything.
 
-Milestone 2 (AI Memory) is implemented but needs live testing.
+Milestone 2 (AI Memory) was implemented Feb 26 but never live-tested.
 
 Task: Test the rolling story summary system end-to-end.
 
 1. Start a fresh adventure (clear localStorage, refresh)
 2. Play through 15+ messages with the AI
-3. After message 15, check server logs for summarization
-4. On message 20+, ask the AI about something from message 2-3
+3. After message 15, check server logs for summarization trigger
+4. On message 20+, reference something specific from early messages
 5. Report: Did the AI remember? Was summarization triggered? Any errors?
 
-If issues found, debug and fix. If working, we can move to Milestone 3 (Brand Redesign).
+If issues found, debug and fix. If working, move to Step 2.
 ```
 
----
+**Step 2: Implement Milestone 3 (Page Structure)**
 
-## Loose Ends & Watch Outs
+```
+Read HANDOFF.md (especially the "Milestone 3: Page Structure" section).
+Read STORY_MODE_V2_BRAINSTORM.md for full context on the V2 vision.
 
-### Half-done:
-- **Summary quality untested** — The summarization prompt may need tuning based on real output quality
+Task: Implement page-based story structure.
 
-### Known behaviors:
-- **First summary triggers on message 15** — Because we need 10 unsummarized + 5 recent window
-- **Summary available for NEXT response** — Fire-and-forget means current response won't have the just-generated summary
+1. Add totalPages, currentPage, storyLength fields to schema
+2. Update aiService.ts system prompt to include page position and pacing guidance
+3. Add page increment logic when AI responds
+4. Add story completion detection
+5. Update the New Story API to accept genre + storyLength + characterDescription
+6. Test: Start a 25-page story, verify page counting and AI pacing awareness
 
-### Things that could break:
-- **If summarization fails**, the story still works — it just won't have summary context (same as before Milestone 2)
-- **If OPENROUTER_API_KEY not set**, summarization will fail silently (logged but not blocking)
-
-### Decisions deferred:
-- **Summary in admin dashboard** — Showing summary counts and costs would be useful but not critical
-- **Manual re-summarization** — Could be useful if a summary is poor quality
+Do NOT touch the frontend yet — we'll do the UI overhaul in Milestone 5.
+Keep the existing chat interface working; just add page tracking underneath.
+```
 
 ---
 
@@ -215,7 +190,7 @@ If issues found, debug and fix. If working, we can move to Milestone 3 (Brand Re
 
 ### `.env` variables (names only):
 ```
-OPENROUTER_API_KEY    # Required for real AI responses AND summarization
+OPENROUTER_API_KEY    # Required for AI responses + summarization
 DATABASE_URL          # Supabase PostgreSQL connection string
 PORT                  # Server port (default 5000, dev uses 3000)
 NODE_ENV              # development | production
@@ -224,8 +199,8 @@ ADMIN_KEY             # Required for /api/admin/* endpoints
 ```
 
 ### Database state:
-- **New table**: `story_summaries` with `session_id` column for isolation
-- **Existing tables**: `characters`, `quests`, `items`, `messages`, `game_state`
+- **Tables**: `characters`, `quests`, `items`, `messages`, `game_state`, `story_summaries`
+- **Pending schema additions (M3)**: `totalPages`, `currentPage`, `storyLength` on game state
 
 ### Recent commits:
 ```
@@ -236,37 +211,16 @@ ADMIN_KEY             # Required for /api/admin/* endpoints
 
 ---
 
-## How To Resume
+## Key Reference Files
 
-### Before writing any code:
-
-1. **Read context files:**
-   ```bash
-   cat HANDOFF.md   # This file — session context
-   cat CLAUDE.md    # Engineering operating manual
-   ```
-
-2. **Start the dev server:**
-   ```bash
-   cd /Users/davidsteinbroner/Projects/Active\ Development/story-mode
-   npm run dev
-   ```
-
-3. **Verify the app works:**
-   - Open http://localhost:3000
-   - Create a character or continue existing adventure
-   - Send messages in Story tab
-   - Watch server logs for `[AI Service]` and `[SummaryService]` output
-
-4. **Check git status:**
-   ```bash
-   git status        # Should be clean
-   git log --oneline -5  # See recent commits
-   ```
-
-### First task for next session:
-See "The Next Thing To Do" section above — test the Milestone 2 implementation end-to-end.
+| File | Purpose |
+|---|---|
+| `CLAUDE.md` | Engineering operating manual — read first every session |
+| `HANDOFF.md` | This file — session context and next steps |
+| `STORY_MODE_V2_BRAINSTORM.md` | V2 vision doc (bookshelf, Guide, pages, community) |
+| `story-mode-prototype.html` | Interactive UI prototype for V2 |
+| `design_guidelines.md` | Brand specs (Pastel Playground palette) |
 
 ---
 
-*Last updated: February 26, 2026 by Claude Code*
+*Last updated: March 15, 2026 by David + Claude (Cowork)*
