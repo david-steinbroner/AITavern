@@ -619,12 +619,14 @@ export class DbStorage implements IStorage {
     }
   }
 
-  async deactivateSummaries(sessionId: string): Promise<void> {
+  async deactivateSummaries(sessionId: string, storyId?: string): Promise<void> {
     try {
+      const conditions = [eq(storySummaries.sessionId, sessionId)];
+      if (storyId) conditions.push(eq(storySummaries.storyId, storyId));
       await db
         .update(storySummaries)
         .set({ isActive: false })
-        .where(eq(storySummaries.sessionId, sessionId));
+        .where(and(...conditions));
     } catch (error) {
       throw new Error(`Failed to deactivate summaries: ${error instanceof Error ? error.message : error}`);
     }

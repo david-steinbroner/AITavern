@@ -18,17 +18,36 @@ This project is managed using three AI tools with distinct roles. Understanding 
 
 | Tool | Role | Best For |
 |---|---|---|
-| **Claude (claude.ai)** | Strategic partner & prompt author | Planning, audits, architecture decisions, writing prompts for the other tools, reviewing outputs, drafting docs |
-| **Cursor (Cohort)** | Senior engineer with full codebase access | Deep code analysis, multi-file refactors, answering "what does this code actually do," debugging |
-| **Claude Code** | Executing engineer | Implementing defined tasks, running commands, file creation/editing, committing changes |
+| **Cowork (Claude desktop app)** | PM, strategist, prototyper | Planning, audits, architecture decisions, brainstorming, prototyping UI, writing docs, small scoped fixes (<5 files), creating prompts for Claude Code |
+| **Claude Code** | Executing engineer | Implementing defined tasks, multi-file refactors, running dev server, testing, committing changes, anything touching 5+ files |
+| **Cursor (Cohort)** | Senior engineer with full codebase access | Deep code analysis, answering "what does this code actually do," large-scale debugging |
+
+### How we decide who does what:
+
+**Cowork handles it directly when:**
+- The fix is small and well-understood (under ~5 files)
+- Cowork already investigated the issue and knows exactly what to change
+- It's a doc update, status update, or planning task
+- It's UI prototyping or brainstorming
+- It's creating a prompt, spec, or decision doc
+
+**Hand it to Claude Code when:**
+- The change touches 5+ files or is a large refactor
+- It needs the dev server running to test interactively
+- It needs to run the build, lint, or test suite
+- It's a commit, push, or git operation
+- The task benefits from Claude Code's 86 installed skills
+- Cowork hasn't investigated yet and Claude Code can figure it out independently
+
+**When handing off to Claude Code**, Cowork provides a natural language prompt — not a terminal command. Claude Code takes directions conversationally, just like talking to a teammate. The prompt should include: what to do, why, which files are involved, and what to watch out for.
 
 ### The handoff pattern:
-1. **You bring a goal to Claude (me).** We talk through it, make decisions, define the task clearly.
-2. **I write the prompt.** Exact instructions, scoped tightly, ready to paste.
-3. **You give it to Cursor or Claude Code.** They execute. You paste back any output I need to see.
-4. **I review and plan the next step.**
+1. **You bring a goal to Cowork.** We talk through it, make decisions, scope the task.
+2. **Cowork either does it directly OR writes a prompt for Claude Code** — and tells you which.
+3. **If Claude Code:** You paste the prompt. Claude Code executes. You paste back any output Cowork needs to see.
+4. **Cowork reviews and plans the next step.**
 
-You should never have to translate my outputs into instructions yourself. If I give you something — a document, a plan, a code review — I will also tell you exactly what to do with it and which tool to use.
+You should never have to translate outputs into instructions yourself. If Cowork gives you something — a document, a plan, a code review — it will also tell you exactly what to do with it and which tool to use.
 
 ---
 
@@ -227,26 +246,38 @@ Lavender:          #C9B6E4  ← secondary actions
 
 ## 9. Current Milestone
 
-**Milestone 2: AI Memory & Context — Rolling Story Summary**
+**Milestone 5: Polish, Bugs & UX Overhaul**
 
-The AI currently only sees the last 5 messages of conversation context. This causes it to "forget" earlier story events, character details, and quest progress. We need to extend the AI's context window by implementing a rolling story summary.
+The core product pivot is complete — Story Mode is now a page-based interactive storytelling platform with a bookshelf, genre/length selection, and a Guide mascot. This milestone focuses on fixing bugs, tightening the UX, and making the experience feel polished before adding new features.
 
-### Goal:
-The AI should always have the full narrative context of the adventure, not just the last few exchanges. When a user references something from 20 messages ago, the AI should remember it.
+### Bugs to fix:
+1. **Story isolation bug** — Starting a new story sometimes pulls in AI context from a previous story. Likely a `storyId` scoping issue in `aiService.ts` or `getGameContext()`.
+2. **"End" button does nothing** — Tapping "End" on the story screen has no effect. Needs to properly end the story and return to bookshelf.
+3. **Narrator fallback error on story creation** — Intermittent: first AI response on a new story fails with "The narrator pauses, gathering their thoughts..." JSON parse failure. Regenerate works. Needs retry logic or better error recovery.
 
-### Tasks in scope:
-1. Design a story summary schema (what gets summarized, how often, where it's stored)
-2. Create a summarization service that condenses older messages into narrative summaries
-3. Update `aiService.ts` to include the rolling summary in the system prompt
-4. Implement automatic summarization triggers (e.g., every 10 messages, or when context window fills)
-5. Ensure summaries capture: key plot points, NPC relationships, quest progress, player decisions
-6. Test that the AI can reference events from early in the adventure
+### UX improvements:
+4. **Story screen overhaul** — The reading experience is the core differentiator and needs to feel immersive:
+   - Remove persistent "Setting the scene / page X/X" progress bar from top
+   - Remove speech-to-text mic button (broken — doesn't request permissions, fires prematurely)
+   - Remove persistent text input box from bottom
+   - Add "I have something else in mind..." as a tap option alongside the AI's choices — tapping it reveals the text input + keyboard
+   - Add font size +/- controls somewhere accessible
+5. **Single-viewport screens** — All screens (bookshelf, story creation, story) should fit on one screen without scrolling on most mobile devices.
+6. **Remove emoji icons** — Emojis throughout the UI don't fit the brand direction. Replace with subtle iconography or remove entirely.
+7. **"Surprise me" button** — On the character description step (step 3 of story creation), add a button that auto-fills the text box with a randomly AI-generated character description.
+
+### Needs discussion (not yet scoped):
+8. **The Guide AI character** — Currently appears as a mascot on the bookshelf with a greeting bubble. Open questions:
+   - Should the top-right icon be a menu? Or open a chat with The Guide?
+   - Should The Guide be a real chatbot (delete account, explain how it works, resume old story, start new story)?
+   - Naming: "The Guide" vs "The Librarian" vs "The Historian" — which fits the bookshelf/story brand?
+   - This is a significant product decision that shapes the whole navigation model.
 
 ### Out of scope for this milestone:
-- RAG / vector search (future milestone)
+- RAG / vector search
 - User accounts or cross-device persistence
-- UI changes
-- Brand redesign
+- New genres or story mechanics
+- Removing dead server code (users/enemies/campaigns tables) — separate cleanup task
 
 ---
 
@@ -254,31 +285,25 @@ The AI should always have the full narrative context of the adventure, not just 
 
 ### Milestone 1: Foundation — Real Persistence & Session Isolation ✅
 
-**What was built:**
+Replaced in-memory storage with PostgreSQL via Supabase. Added session isolation so each browser gets its own independent game state. Created DbStorage class, frontend session management via `x-session-id` header, real token cost tracking, and admin dashboard.
 
-We replaced the in-memory storage (`MemStorage`) with a real PostgreSQL database via Supabase, and added session isolation so each browser gets its own independent game state.
+### Milestone 2: AI Memory & Context — Rolling Story Summary ✅
 
-**Key changes:**
+Implemented rolling story summaries so the AI maintains full narrative context beyond the last 5 messages. Created `summaryService.ts` with automatic summarization triggered every 10 unsummarized messages. Added `storySummaries` table to schema. Summaries capture key plot points, NPC relationships, quest progress, and player decisions. Integrated into `getGameContext()` so the AI always has the full story arc.
 
-1. **Database connection** (`server/db.ts`): Created a connection pool using `postgres` package with Drizzle ORM. Includes `testConnection()` that validates the DB is reachable on server startup.
+### Milestone 3: Product Pivot — Page-Based Storytelling Platform ✅
 
-2. **Session isolation**: Added `sessionId` column to 5 tables: `characters`, `quests`, `items`, `messages`, `gameState`. All queries are now scoped by session ID.
+Major pivot from D&D-style gameplay to a page-based interactive storytelling platform. Built:
+- **Bookshelf UI** (`Bookshelf.tsx`): Virtual bookshelf with color-coded book spines by genre, "Currently Reading" and "Finished" shelves, quick-continue card for most recent story.
+- **Story creation wizard** (`NewStoryCreation.tsx`): 3-step flow — genre selection (Fantasy, Mystery, Sci-Fi, Romance, Horror) → page count (25/50/100/250 pages with time estimates) → character description.
+- **Multi-story support**: Added `storyId` scoping across all tables. Each session can have multiple independent stories.
+- **Guide mascot** (`GuideAvatar`): Glowing orb character with personality, appears on bookshelf. AI system prompt rewritten as "The Guide — a warm, witty, and imaginative storyteller."
+- **New API routes**: `POST /api/story/new`, `GET /api/stories`, `DELETE /api/stories/:storyId`.
+- **3-view routing** in App.tsx: bookshelf → newStory → game.
 
-3. **DbStorage class** (`server/dbStorage.ts`): Implements the `IStorage` interface with real database queries. All CRUD operations include session scoping. Preserves business logic from MemStorage:
-   - Level-up calculation when XP increases
-   - Quest auto-complete when progress reaches max
-   - XP rewards on quest completion
-   - Duplicate quest prevention
+### Milestone 4: Pacing & Narrative Structure ✅
 
-4. **Frontend session management**: Session ID is generated in `localStorage` on first visit (`main.tsx`) and sent with every API request via `x-session-id` header (`queryClient.ts`).
-
-5. **Real token cost tracking** (`server/spendTracker.ts`): Now captures actual `prompt_tokens` and `completion_tokens` from OpenRouter API responses. Calculates real costs using Claude 3.5 Haiku pricing ($0.0008/1K input, $0.004/1K output). Tracks per-session spend.
-
-6. **Admin dashboard**: Added `/api/admin/spend` and `/api/admin/sessions` endpoints (protected by `ADMIN_KEY`). Created `AdminDashboard.tsx` component at `/admin` route for monitoring costs.
-
-**Why it matters:**
-
-Before this milestone, all game data was lost on server restart and all users shared the same game state. Now each browser session has persistent, isolated data that survives deploys.
+Added act-based pacing guidance so the AI shapes the narrative arc across the full page count. Created `getPacingGuidance()` that divides stories into Setup (0-20%), Rising Action (20-50%), Escalation (50-75%), Climax (75-90%), and Resolution (final pages). Built `StoryProgress.tsx` component showing current page, progress bar, and pacing labels. AI receives different narrative instructions based on story position. Final page delivers a definitive conclusion with no choices.
 
 ---
 
@@ -286,14 +311,18 @@ Before this milestone, all game data was lost on server restart and all users sh
 
 | File | What it does |
 |---|---|
-| `shared/schema.ts` | Database schema (Drizzle + Zod types). Source of truth for data models. All tables include `sessionId` for isolation. |
+| `shared/schema.ts` | Database schema (Drizzle + Zod types). Source of truth for data models. All tables include `sessionId` and `storyId` for isolation. Includes `storySummaries` table. |
 | `server/db.ts` | Database connection pool (postgres-js + Drizzle). Exports `db` instance and `testConnection()`. |
-| `server/dbStorage.ts` | Production storage implementation. All CRUD operations with session scoping and business logic (level-ups, quest rewards). |
+| `server/dbStorage.ts` | Production storage implementation. All CRUD operations with session + story scoping and business logic (level-ups, quest rewards). |
 | `server/storage.ts` | Exports `IStorage` interface and the active storage instance. `MemStorage` class still exists as backup but is unused. |
-| `server/routes.ts` | All API endpoints. Thin handlers only. Uses `getSessionId(req)` helper for session extraction. |
-| `server/aiService.ts` | All AI calls. Prompt construction, response parsing, action execution. Returns `tokenUsage` for cost tracking. |
+| `server/routes.ts` | All API endpoints. Thin handlers only. Includes story lifecycle routes (`/api/story/new`, `/api/stories`, `/api/stories/:storyId`). Uses `getSessionId(req)` helper. |
+| `server/aiService.ts` | All AI calls. Prompt construction with pacing guidance, rolling summary integration, response parsing, action execution. Returns `tokenUsage` for cost tracking. |
+| `server/summaryService.ts` | Rolling story summary generation. Condenses older messages into narrative summaries every 10 messages. |
 | `server/spendTracker.ts` | Real-time cost tracking with actual token counts. Tracks daily/all-time spend, per-session usage. Provides admin stats. |
-| `client/src/App.tsx` | View routing and top-level state. Gets complex — be careful here. |
+| `client/src/App.tsx` | 3-view routing (bookshelf → newStory → game) and top-level state. Complex — be careful here. |
+| `client/src/components/Bookshelf.tsx` | Main landing screen. Virtual bookshelf with book spines, quick-continue card, GuideAvatar mascot. |
+| `client/src/components/NewStoryCreation.tsx` | 3-step story creation wizard: genre → page count → character description. |
+| `client/src/components/StoryProgress.tsx` | Page progress bar with pacing phase labels. Shown during story gameplay. |
 | `client/src/lib/queryClient.ts` | API request helpers. Adds `x-session-id` header to all requests. |
 | `client/src/components/AdminDashboard.tsx` | Internal admin UI at `/admin`. Shows spend metrics, session stats. Protected by admin key prompt. |
 | `client/src/lib/posthog.ts` | Analytics. Don't remove events — add to them. |
@@ -315,15 +344,16 @@ Before this milestone, all game data was lost on server restart and all users sh
 
 These exist in the codebase but are scheduled for removal. Do not build on top of them:
 
-- `CombatInterface.tsx` — wrong product paradigm (combat routes still exist but are deprecated)
-- `CharacterCreation.tsx`, `CharacterQuestionnaire.tsx`, `AbilityScoreRoller.tsx` — D&D character creation, being replaced
-- `CampaignManager.tsx` — broken, being redesigned
-- The `users`, `enemies`, `campaigns` tables and related routes — dead code, not session-scoped
+- `CharacterQuestionnaire.tsx`, `AbilityScoreRoller.tsx` — D&D character creation, replaced by `NewStoryCreation.tsx`
+- `CampaignManager.tsx` — broken, replaced by bookshelf model
+- The `users`, `enemies`, `campaigns` tables and related routes (combat routes, enemy routes) — dead code from the D&D paradigm, not session-scoped
 - `MemStorage` class in `server/storage.ts` — kept as backup but unused; `DbStorage` is the active implementation
 
 **Already deleted:**
 - `components/examples/` — removed (was dead storybook code)
 - `server/worker.ts` — removed (was dead Cloudflare Workers stub)
+- `CombatInterface.tsx` — removed (wrong product paradigm)
+- `CharacterCreation.tsx` — removed (replaced by new story creation flow)
 
 Do not refactor or improve the files listed above. They will be deleted.
 

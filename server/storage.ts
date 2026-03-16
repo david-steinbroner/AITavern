@@ -83,7 +83,7 @@ export interface IStorage {
   // Story summary management (AI memory)
   getActiveSummary(sessionId: string, storyId?: string): Promise<StorySummary | null>;
   createSummary(sessionId: string, summary: InsertStorySummary): Promise<StorySummary>;
-  deactivateSummaries(sessionId: string): Promise<void>;
+  deactivateSummaries(sessionId: string, storyId?: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -745,7 +745,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
     throw new Error("MemStorage does not support story summaries — use DbStorage");
   }
 
-  async deactivateSummaries(sessionId: string): Promise<void> {
+  async deactivateSummaries(sessionId: string, storyId?: string): Promise<void> {
     // No-op for MemStorage
   }
 }

@@ -4,28 +4,28 @@
 
 ## Session Date & Summary
 
-**Date:** March 15, 2026
+**Date:** March 16, 2026
 
 **What happened this session:**
-Major creative pivot. David and Rachel brainstormed a new vision for Story Mode V2 — a storybook/bookshelf metaphor with a persistent AI Guide character, page-based story structure, and community features. Built an interactive prototype of the new UI. Revised the entire milestone roadmap to align with this new direction.
+Shipped Milestones 3 and 5 back-to-back, plus multi-story support. The app went from a flat chat interface to a bookshelf-based story reader with page structure, pacing, and the ability to run multiple stories per session. Also cleaned up 15 dead component/hook files from the old UI.
 
 **What we accomplished:**
-1. Captured all V2 brainstorm ideas in `STORY_MODE_V2_BRAINSTORM.md`
-2. Built a full interactive prototype (`story-mode-prototype.html`) with four views: bookshelf, story reading, new story creation, public library
-3. Revised the milestone roadmap (see below)
+1. M3 (Page Structure): page-based story structure with AI pacing guidance, new story creation flow, progress tracking
+2. M5 (Bookshelf UI): replaced old start menu with bookshelf home screen, Guide avatar, genre-colored book spines, simplified App.tsx from 858→378 lines
+3. Multi-story support: story_id scoping across all tables, multiple books on bookshelf, per-story data isolation
+4. Cleanup: removed 15 dead components/hooks from old UI (CombatInterface, CharacterCreation, etc.)
 
-**Key decision:** This is a pivot in the presentation and interaction layer, NOT the foundation. All Milestone 1 (DB, sessions) and Milestone 2 (AI memory) work still applies.
+**Key decisions:**
+- M4 (The Guide) was partially absorbed — the Guide avatar appears on the bookshelf with contextual greetings, but the full "unified AI character across all contexts" is not yet implemented
+- Multi-story support was added as an extension of M5, not a separate milestone
 
 ---
 
-## Previous Session (February 26, 2026)
+## Previous Sessions
 
-**What was built:**
-- Milestone 2: Rolling Story Summary — complete implementation committed (5e29dd7)
-- `story_summaries` table, `summaryService.ts`, context injection in `aiService.ts`
-- Background summarization trigger every 10 messages (fire-and-forget)
+**March 15, 2026:** Major creative pivot. V2 brainstorm with Rachel — bookshelf metaphor, Guide character, page-based stories. Built interactive prototype. Revised milestone roadmap.
 
-**Status:** Code-complete, never live-tested. Still needs a real 15+ message playthrough to verify.
+**February 26, 2026:** Milestone 2 (Rolling Story Summary) — complete implementation committed (5e29dd7). `story_summaries` table, `summaryService.ts`, context injection in `aiService.ts`. Background summarization trigger every 10 messages. Code-complete, never live-tested.
 
 ---
 
@@ -42,65 +42,52 @@ Full details in `STORY_MODE_V2_BRAINSTORM.md`. Core concepts:
 
 ---
 
-## Revised Milestone Roadmap
+## Milestone Roadmap
 
 | # | Milestone | Status | What It Is | Depends On |
 |---|-----------|--------|------------|------------|
 | 0 | Local Dev | ✅ Done | Repo runs locally | — |
 | 1 | Foundation | ✅ Done | DB persistence, session isolation | — |
-| 2 | AI Memory | ✅ Built (needs testing) | Rolling story summary | M1 |
-| **3** | **Page Structure** | **Not started** | **Fixed page counts, AI pacing awareness, story completion** | **M2** |
-| **4** | **The Guide** | **Not started** | **Unified AI character across all app contexts** | **M3** |
-| **5** | **Bookshelf UI** | **Not started** | **Replace flat UI with bookshelf metaphor (prototype exists)** | **M4** |
+| 2 | AI Memory | ✅ Done (needs live test) | Rolling story summary | M1 |
+| 3 | Page Structure | ✅ Done | Fixed page counts, AI pacing, story completion | M2 |
+| 4 | The Guide | ⚠️ Partial | Guide avatar on bookshelf; full unified personality not yet implemented | M3 |
+| 5 | Bookshelf UI | ✅ Done | Bookshelf home screen, multi-story support, dead code cleanup | M4 |
 | 6 | Production | Not started | Error handling, monitoring, deploy | M5 |
 | 7 | Cross-Story Travel | Not started | Character persistence across stories | M5 + users |
 | 8 | Community Templates | Not started | Player-created content, voting, moderation | M7 + users |
 | 9 | Adaptive Theming | Not started | Genre influences visual design | M5 |
 
-### Old milestones → new mapping:
-- Old M3 (Brand Redesign) → **absorbed into new M5 (Bookshelf UI)**. The redesign happens because of a better interaction model, not just new colors.
-- Old M5 (World Generation) → **absorbed into new M3 (Page Structure)**. World gen is part of the "New Story" flow now.
+### What's still open from earlier milestones:
+- **M2 (AI Memory):** Never live-tested. Needs a 15+ message playthrough to verify summarization triggers and recall.
+- **M4 (The Guide):** Guide avatar exists on bookshelf with greetings, but the full vision (unified AI personality as narrator in stories, librarian on shelf, concierge everywhere) is not yet wired into the AI system prompt or story responses.
 
 ---
 
-## Milestone 3: Page Structure (NEXT)
+## What Was Built (M3 + M5 + Multi-Story)
 
-This is the keystone feature. Everything else depends on it.
+### M3: Page Structure (ac2fcc6)
+- Added `totalPages`, `currentPage`, `storyLength` fields to schema
+- Migration `003_add_page_structure.sql` applied
+- AI system prompt includes page position and pacing guidance (setup → rising action → climax → resolution)
+- New Story API accepts genre + storyLength + characterDescription
+- New story creation UI and page progress bar (a65256b)
 
-### What needs to happen:
+### M5: Bookshelf UI (2316b15)
+- `Bookshelf.tsx` — home screen with Guide avatar, wooden shelf, genre-colored book spines, contextual greeting
+- Simplified `App.tsx` from 858→378 lines: 3 views (bookshelf / newStory / game)
+- Removed old flows: welcome, startMenu, characterCreation, adventureTemplates, combat, demo tooltips, tab navigation
+- Bookshelf animations (bounce-slow, slide-up) and story-prose font
 
-**Schema changes:**
-- Add `totalPages` (integer) and `currentPage` (integer) to the story/game state
-- Add `storyLength` tier enum or field: 'short' (25), 'novella' (50), 'novel' (100), 'epic' (250)
-- Each AI reply increments `currentPage`
-- Story is "complete" when `currentPage >= totalPages`
+### Multi-Story Support (8f6cd2c)
+- `story_id` column added to all data tables (migration `004_add_story_id.sql`)
+- All queries accept `x-story-id` header for scoping
+- `POST /api/story/new` generates unique storyId (no longer clears old data)
+- `GET /api/stories` lists all stories for a session
+- `DELETE /api/stories/:storyId` removes a specific story
+- Bookshelf renders multiple books, enter/exit story updates active storyId
 
-**AI prompt changes:**
-- System prompt now includes: "You are writing page {current} of {total}."
-- Pacing guidance injected based on position in story:
-  - Pages 1-20%: Setup, world-building, character introduction
-  - Pages 20-50%: Rising action, complications, relationships deepen
-  - Pages 50-75%: Escalation, stakes increase, plot twists
-  - Pages 75-90%: Climax, confrontation, peak tension
-  - Pages 90-100%: Resolution, consequences, ending
-- Final page prompt: "This is the last page. Bring the story to a satisfying conclusion."
-- Number of choices may reduce near the end (funnel toward resolution)
-
-**New Story flow:**
-- User picks genre, story length, describes character
-- AI generates opening page (world, setting, first scene, first choices)
-- This replaces the old character creation → world generation as separate steps
-
-**Story completion:**
-- When `currentPage >= totalPages`, the story is marked complete
-- The Guide acknowledges the ending
-- Player can: start a new story, re-read the finished book, (later) carry character forward
-
-### What stays the same:
-- Database layer (Supabase + Drizzle)
-- Session isolation pattern
-- Rolling summary system (even more important now for pacing)
-- Message storage (each page is still a message pair)
+### Dead Code Cleanup (8a380be)
+- Removed 15 dead component/hook files from old UI
 
 ---
 
@@ -123,66 +110,56 @@ This is a **visual reference**, not production code. The real implementation wil
 
 ## Exact State of Every File Area
 
-### Foundation (M1) — solid, no changes needed:
+### Foundation (M1) — solid:
 - `server/db.ts` — DB connection pool
-- `server/dbStorage.ts` — All CRUD with session scoping
-- `server/storage.ts` — IStorage interface
-- `shared/schema.ts` — Drizzle schema (will need additions for M3)
-- `client/src/lib/queryClient.ts` — Session ID header injection
+- `server/dbStorage.ts` — All CRUD with session + storyId scoping
+- `server/storage.ts` — IStorage interface (updated with storyId and summary methods)
+- `shared/schema.ts` — Drizzle schema (includes storySummaries, page fields, storyId)
+- `client/src/lib/queryClient.ts` — Session ID + Story ID header injection
 
 ### AI Memory (M2) — built, needs live test:
 - `server/summaryService.ts` — Summarization service
-- `server/aiService.ts` — Context injection, background trigger
-- `shared/schema.ts` — `storySummaries` table
+- `server/aiService.ts` — Context injection, background trigger, page pacing
 
-### Scheduled for deletion (unchanged from before):
-- `CombatInterface.tsx`, `CharacterCreation.tsx`, `CharacterQuestionnaire.tsx`, `AbilityScoreRoller.tsx`
-- `CampaignManager.tsx`
-- `users`, `enemies`, `campaigns` tables
-- `MemStorage` class
+### Bookshelf + Story UI (M3/M5) — shipped:
+- `client/src/components/Bookshelf.tsx` — Home screen with multi-story shelf
+- `client/src/App.tsx` — Simplified 3-view router (bookshelf / newStory / game)
+- `client/src/components/ChatInterface.tsx` — Minimal story reading header
+
+### Already deleted (from 8a380be cleanup):
+- CombatInterface, CharacterCreation, CharacterQuestionnaire, AbilityScoreRoller, CampaignManager, and 10 other dead files
+
+### Still scheduled for deletion:
+- `users`, `enemies`, `campaigns` tables and related routes
+- `MemStorage` class in `server/storage.ts`
 
 ---
 
 ## The Next Thing To Do
 
-**Step 1: Test Milestone 2 (AI Memory)**
+The next milestone depends on priorities. Here are the realistic options:
 
-Before building anything new, verify the rolling summary system actually works:
+### Option A: Finish M4 (The Guide) — unified AI personality
+The Guide avatar is on the bookshelf, but the AI doesn't yet have a consistent "Guide" personality wired into its system prompt. This would mean:
+- Define the Guide's voice, personality, and role in a system prompt constant
+- Inject Guide persona into story narration, bookshelf greetings, and new-story flow
+- Ensure the Guide feels like one character across all contexts
 
-```
-Read HANDOFF.md and CLAUDE.md in full before doing anything.
+### Option B: M6 (Production Hardening)
+Get the app deploy-ready:
+- Error handling and recovery in all API routes
+- Monitoring and alerting (Sentry is partially set up)
+- Rate limiting on AI calls
+- Cost guardrails (spend caps per session)
+- Deploy pipeline validation on Render
 
-Milestone 2 (AI Memory) was implemented Feb 26 but never live-tested.
+### Option C: M9 (Adaptive Theming)
+Genre-driven visual design — the story's genre/tone influences backgrounds, colors, and typography as the story progresses.
 
-Task: Test the rolling story summary system end-to-end.
+### Option D: Live-test M2 (AI Memory)
+The rolling summary system has never been tested end-to-end. Before building more, it may be worth verifying it works with a real 15+ message playthrough.
 
-1. Start a fresh adventure (clear localStorage, refresh)
-2. Play through 15+ messages with the AI
-3. After message 15, check server logs for summarization trigger
-4. On message 20+, reference something specific from early messages
-5. Report: Did the AI remember? Was summarization triggered? Any errors?
-
-If issues found, debug and fix. If working, move to Step 2.
-```
-
-**Step 2: Implement Milestone 3 (Page Structure)**
-
-```
-Read HANDOFF.md (especially the "Milestone 3: Page Structure" section).
-Read STORY_MODE_V2_BRAINSTORM.md for full context on the V2 vision.
-
-Task: Implement page-based story structure.
-
-1. Add totalPages, currentPage, storyLength fields to schema
-2. Update aiService.ts system prompt to include page position and pacing guidance
-3. Add page increment logic when AI responds
-4. Add story completion detection
-5. Update the New Story API to accept genre + storyLength + characterDescription
-6. Test: Start a 25-page story, verify page counting and AI pacing awareness
-
-Do NOT touch the frontend yet — we'll do the UI overhaul in Milestone 5.
-Keep the existing chat interface working; just add page tracking underneath.
-```
+### Recommended order: D → A → B (test what's built, finish the Guide, then harden for production)
 
 ---
 
@@ -200,13 +177,19 @@ ADMIN_KEY             # Required for /api/admin/* endpoints
 
 ### Database state:
 - **Tables**: `characters`, `quests`, `items`, `messages`, `game_state`, `story_summaries`
-- **Pending schema additions (M3)**: `totalPages`, `currentPage`, `storyLength` on game state
+- **Applied migrations**: `001` (base), `002` (sessions), `003_add_page_structure`, `004_add_story_id`
+- **All tables have**: `session_id` and `story_id` columns for isolation
 
 ### Recent commits:
 ```
+8f6cd2c feat: multi-story support — multiple stories per session on bookshelf
+8a380be chore: remove 15 dead component/hook files from old UI
+2316b15 feat: M5 bookshelf UI — replace old start menu with clean mobile-first design
+1f8f349 chore: rename package from rest-express to story-mode
+a65256b feat: add new story creation UI and page progress bar
+ac2fcc6 feat: add page-based story structure (Milestone 3)
+2d95eb6 docs: update handoff for Milestone 2 completion
 5e29dd7 feat: add rolling story summary for AI memory (Milestone 2)
-1959d50 docs: add session handoff document
-5e5ad9b fix: correct token cost calculation, update CLAUDE.md for milestone 2
 ```
 
 ---
@@ -223,4 +206,4 @@ ADMIN_KEY             # Required for /api/admin/* endpoints
 
 ---
 
-*Last updated: March 15, 2026 by David + Claude (Cowork)*
+*Last updated: March 16, 2026 by David + Claude (Cowork)*

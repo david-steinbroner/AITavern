@@ -176,7 +176,7 @@ CHARACTER PROGRESSION:
 - Keep progression feeling natural, not game-like`;
   }
 
-  private async getGameContext(sessionId: string): Promise<{
+  private async getGameContext(sessionId: string, storyId?: string): Promise<{
     character: Character | undefined;
     quests: Quest[];
     items: Item[];
@@ -185,12 +185,12 @@ CHARACTER PROGRESSION:
     storySummary: StorySummary | null;
   }> {
     const [character, quests, items, recentMessages, gameState, storySummary] = await Promise.all([
-      storage.getCharacter(sessionId),
-      storage.getQuests(sessionId),
-      storage.getItems(sessionId),
-      storage.getRecentMessages(sessionId, 10),
-      storage.getGameState(sessionId),
-      storage.getActiveSummary(sessionId),
+      storage.getCharacter(sessionId, storyId),
+      storage.getQuests(sessionId, storyId),
+      storage.getItems(sessionId, storyId),
+      storage.getRecentMessages(sessionId, 10, storyId),
+      storage.getGameState(sessionId, storyId),
+      storage.getActiveSummary(sessionId, storyId),
     ]);
 
     return { character, quests, items, recentMessages, gameState, storySummary };
@@ -311,12 +311,12 @@ CHARACTER PROGRESSION:
    * Check if summarization is needed and trigger it if so.
    * This is non-blocking - if summarization fails, we log the error but don't stop the response.
    */
-  private async checkAndTriggerSummarization(sessionId: string): Promise<void> {
+  private async checkAndTriggerSummarization(sessionId: string, storyId?: string): Promise<void> {
     try {
-      // Get all messages and current summary
+      // Get all messages and current summary for this specific story
       const [allMessages, currentSummary] = await Promise.all([
-        storage.getMessages(sessionId),
-        storage.getActiveSummary(sessionId),
+        storage.getMessages(sessionId, storyId),
+        storage.getActiveSummary(sessionId, storyId),
       ]);
 
       const totalMessages = allMessages.length;
@@ -374,9 +374,10 @@ CHARACTER PROGRESSION:
       }
 
       // Deactivate old summaries and save the new one
-      await storage.deactivateSummaries(sessionId);
+      await storage.deactivateSummaries(sessionId, storyId);
       await storage.createSummary(sessionId, {
         sessionId,
+        storyId: storyId || null,
         summaryText: summaryResult.summaryText,
         messageStartIndex: 0,
         messageEndIndex: messagesToSummarizeEnd,
@@ -405,10 +406,11 @@ CHARACTER PROGRESSION:
     }
   }
 
-  async generateResponse(sessionId: string, playerMessage: string): Promise<AIResponse> {
+  async generateResponse(sessionId: string, playerMessage: string, storyId?: string): Promise<AIResponse> {
     const startTime = Date.now();
     console.log('[AI Service] Starting AI response generation', {
       sessionId,
+      storyId,
       playerMessage: playerMessage.substring(0, 100),
       timestamp: new Date().toISOString()
     });
@@ -424,13 +426,13 @@ CHARACTER PROGRESSION:
 
       // Check if summarization is needed (fire-and-forget - runs in background)
       // The new summary won't be available for THIS response, but will be ready for the NEXT one
-      this.checkAndTriggerSummarization(sessionId).catch((err) => {
+      this.checkAndTriggerSummarization(sessionId, storyId).catch((err) => {
         console.error('[AI Service] Background summarization error', { error: err.message });
       });
 
-      // Get current game context
-      console.log('[AI Service] Fetching game context');
-      const context = await this.getGameContext(sessionId);
+      // Get current game context for this specific story
+      console.log('[AI Service] Fetching game context', { storyId });
+      const context = await this.getGameContext(sessionId, storyId);
       console.log('[AI Service] Game context retrieved', {
         hasCharacter: !!context.character,
         questCount: context.quests.length,
@@ -689,7 +691,7 @@ Example Quest Actions:
         await storage.updateGameState(sessionId, {
           currentPage: newPage,
           storyComplete: isComplete,
-        });
+        }, storyId);
 
         // Inject page info into actions so the frontend knows
         if (!finalResponse.actions) {
@@ -1007,9 +1009,9 @@ Format as JSON:
     }
   }
 
-  async generateQuestIdeas(sessionId: string, playerLevel: number, currentScene: string): Promise<Quest[]> {
+  async generateQuestIdeas(sessionId: string, playerLevel: number, currentScene: string, storyId?: string): Promise<Quest[]> {
     try {
-      const context = await this.getGameContext(sessionId);
+      const context = await this.getGameContext(sessionId, storyId);
       
       const response = await openai.chat.completions.create({
         model: "anthropic/claude-3.5-haiku",

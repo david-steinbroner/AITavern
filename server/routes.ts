@@ -504,7 +504,7 @@ Your job: Create the opening page. Establish the world, introduce the reader's c
 
 Do NOT re-state the character description back to the reader. Instead, SHOW who they are through the opening scene.`;
 
-      const aiResponse = await aiService.generateResponse(sessionId, firstPagePrompt);
+      const aiResponse = await aiService.generateResponse(sessionId, firstPagePrompt, storyId);
 
       // Track token spend
       if (aiResponse.tokenUsage) {
@@ -774,7 +774,8 @@ Do NOT re-state the character description back to the reader. Instead, SHOW who 
       }
 
       // Generate AI response
-      const aiResponse = await aiService.generateResponse(sessionId, actionMessage);
+      const storyId = getStoryId(req);
+      const aiResponse = await aiService.generateResponse(sessionId, actionMessage, storyId);
 
       // Track request with actual token usage
       spendTracker.trackRequest(sessionId, aiResponse.tokenUsage);
@@ -782,6 +783,7 @@ Do NOT re-state the character description back to the reader. Instead, SHOW who 
       // Store messages
       await storage.createMessage({
         sessionId,
+        storyId: storyId ?? null,
         content: actionMessage,
         sender: 'player',
         senderName: null,
@@ -1193,8 +1195,8 @@ Do NOT re-state the character description back to the reader. Instead, SHOW who 
         return res.status(429).json({ error: spendCheck.reason });
       }
 
-      // Generate AI response
-      const aiResponse = await aiService.generateResponse(sessionId, message);
+      // Generate AI response scoped to current story
+      const aiResponse = await aiService.generateResponse(sessionId, message, storyId);
 
       // Track request with actual token usage
       spendTracker.trackRequest(sessionId, aiResponse.tokenUsage);
@@ -1253,13 +1255,14 @@ Do NOT re-state the character description back to the reader. Instead, SHOW who 
       }
 
       // Process the quick action as a regular chat message
-      const aiResponse = await aiService.generateResponse(sessionId, actionMessage);
+      const storyId = getStoryId(req);
+      const aiResponse = await aiService.generateResponse(sessionId, actionMessage, storyId);
 
       // Track request with actual token usage
       spendTracker.trackRequest(sessionId, aiResponse.tokenUsage);
 
       // Apply AI response (store messages, apply actions, detect side quests)
-      const aiMessage = await applyAIResponse(sessionId, actionMessage, aiResponse);
+      const aiMessage = await applyAIResponse(sessionId, actionMessage, aiResponse, storyId);
 
       res.json({
         message: aiMessage,
