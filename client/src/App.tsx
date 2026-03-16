@@ -24,6 +24,8 @@ import SimpleCharacterCreation from "./components/SimpleCharacterCreation";
 import WorldGeneration from "./components/WorldGeneration";
 import AdventureTemplates from "./components/AdventureTemplates";
 import ColdStartLoader from "./components/ColdStartLoader";
+import NewStoryCreation from "./components/NewStoryCreation";
+import StoryProgress from "./components/StoryProgress";
 import { useTooltips } from "./hooks/useTooltips";
 import { useAnalytics, useSessionTracking } from "./hooks/useAnalytics";
 import { useNotifications } from "./hooks/useNotifications";
@@ -34,7 +36,7 @@ import { setUserContext, setGameContext } from "./lib/sentry";
 import type { Character, Quest, Item, Message, Enemy, GameState } from "@shared/schema";
 
 type TabType = "character" | "quests" | "inventory" | "chat";
-type ViewType = "welcome" | "startMenu" | "userGuide" | "characterCreation" | "adventureTemplates" | "game";
+type ViewType = "welcome" | "startMenu" | "userGuide" | "characterCreation" | "adventureTemplates" | "newStory" | "game";
 
 function GameApp() {
   const [currentView, setCurrentView] = useState<ViewType>("welcome");
@@ -43,6 +45,7 @@ function GameApp() {
   const [isGeneratingWorld, setIsGeneratingWorld] = useState(false);
   const [worldGenerationComplete, setWorldGenerationComplete] = useState(false);
   const [characterName, setCharacterName] = useState("");
+  const [isCreatingStory, setIsCreatingStory] = useState(false);
 
   // Track view changes (welcome, menu, game, etc)
   useEffect(() => {
@@ -52,6 +55,7 @@ function GameApp() {
       userGuide: 'User Guide',
       characterCreation: 'Character Creation',
       adventureTemplates: 'Adventure Templates',
+      newStory: 'New Story',
       game: 'Game Screen'
     };
     console.log('[App] View changed to:', currentView);
@@ -522,19 +526,30 @@ function GameApp() {
           );
         }
         return (
-          <ChatInterface
-            messages={messages}
-            onSendMessage={handleSendMessage}
-            isListening={isListening}
-            onToggleListening={handleToggleListening}
-            isLoading={aiChatMutation.isPending}
-            character={character}
-            quests={quests}
-            items={items}
-            gameState={gameState}
-            onEndAdventure={handleEndAdventure}
-            className="h-full"
-          />
+          <div className="h-full flex flex-col">
+            {/* Page progress bar for V2 page-based stories */}
+            {gameState?.totalPages && gameState.totalPages > 0 && (
+              <StoryProgress
+                currentPage={gameState.currentPage || 0}
+                totalPages={gameState.totalPages}
+                genre={gameState.genre || undefined}
+                storyComplete={gameState.storyComplete || false}
+              />
+            )}
+            <ChatInterface
+              messages={messages}
+              onSendMessage={handleSendMessage}
+              isListening={isListening}
+              onToggleListening={handleToggleListening}
+              isLoading={aiChatMutation.isPending}
+              character={character}
+              quests={quests}
+              items={items}
+              gameState={gameState}
+              onEndAdventure={handleEndAdventure}
+              className="flex-1"
+            />
+          </div>
         );
       default:
         return null;
@@ -568,6 +583,7 @@ function GameApp() {
         onShowGuide={() => setCurrentView("userGuide")}
         onCreateCharacter={() => setCurrentView("characterCreation")}
         onShowAdventureTemplates={() => setCurrentView("adventureTemplates")}
+        onNewStory={() => setCurrentView("newStory")}
         onEndAdventure={handleEndAdventure}
       />
     );
@@ -636,6 +652,45 @@ function GameApp() {
               description: "Failed to generate your world. Please try again.",
               variant: "destructive",
             });
+          }
+        }}
+        onBack={() => setCurrentView("startMenu")}
+      />
+    );
+  }
+
+  if (currentView === "newStory") {
+    return (
+      <NewStoryCreation
+        isLoading={isCreatingStory}
+        onStartStory={async (storyData) => {
+          console.log('[App] New story requested:', storyData);
+          setIsCreatingStory(true);
+          try {
+            const response = await apiRequest('POST', '/api/story/new', storyData);
+            const data = await response.json();
+            console.log('[App] New story created:', data);
+
+            // Invalidate all queries to load fresh story data
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: ['/api/character'] }),
+              queryClient.invalidateQueries({ queryKey: ['/api/game-state'] }),
+              queryClient.invalidateQueries({ queryKey: ['/api/quests'] }),
+              queryClient.invalidateQueries({ queryKey: ['/api/items'] }),
+              queryClient.invalidateQueries({ queryKey: ['/api/messages'] }),
+            ]);
+
+            setActiveTab("chat");
+            setCurrentView("game");
+          } catch (error) {
+            console.error('[App] Error creating story:', error);
+            toast({
+              title: "Error Creating Story",
+              description: "Something went wrong. Please try again.",
+              variant: "destructive",
+            });
+          } finally {
+            setIsCreatingStory(false);
           }
         }}
         onBack={() => setCurrentView("startMenu")}

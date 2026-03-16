@@ -14,7 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Play, HelpCircle, Sword, Scroll, UserPlus, Map, Trash2, Sparkles } from "lucide-react";
+import { Play, HelpCircle, Sword, Scroll, UserPlus, Map, Trash2, Sparkles, BookOpen } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { Character, Quest, Message } from "@shared/schema";
@@ -25,6 +25,7 @@ interface StartMenuProps {
   onShowGuide: () => void;
   onCreateCharacter: () => void;
   onShowAdventureTemplates: () => void;
+  onNewStory?: () => void;
   onShowSettings?: () => void;
   onEndAdventure?: () => void;
 }
@@ -34,6 +35,7 @@ export default function StartMenu({
   onShowGuide,
   onCreateCharacter,
   onShowAdventureTemplates,
+  onNewStory,
   onEndAdventure,
 }: StartMenuProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -196,11 +198,49 @@ export default function StartMenu({
 
         {/* Action CTAs - Emphasized when no active game */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Adventure Templates - Primary when no active game */}
-          <Card className={`p-6 hover-elevate transition-all ${!hasActiveGame ? 'border-primary/30 bg-primary/5 ring-2 ring-primary/20' : ''}`}>
+          {/* New Story (V2) - Primary CTA */}
+          {onNewStory && (
+            <Card className={`p-6 hover-elevate transition-all ${!hasActiveGame ? 'border-primary/30 bg-primary/5 ring-2 ring-primary/20' : ''}`}>
+              <div className="flex items-start gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <BookOpen className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-base mb-1">New Story</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Pick a genre, choose your length, and begin
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant={!hasActiveGame ? "default" : "outline"}
+                onClick={() => {
+                  console.log('[StartMenu] New Story button clicked');
+                  analytics.buttonClicked('New Story', 'Start Menu', {
+                    hasActiveGame
+                  });
+                  onNewStory();
+                }}
+                className="w-full font-semibold"
+                size={!hasActiveGame ? "lg" : "default"}
+                data-testid="button-new-story"
+              >
+                {!hasActiveGame && <Sparkles className="w-4 h-4 mr-2" />}
+                Start a New Story
+              </Button>
+              {!hasActiveGame && (
+                <p className="text-xs text-center text-muted-foreground mt-2">
+                  Choose genre, length & character
+                </p>
+              )}
+            </Card>
+          )}
+
+          {/* Adventure Templates */}
+          <Card className="p-6 hover-elevate transition-all">
             <div className="flex items-start gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Map className="w-5 h-5 text-primary" />
+              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                <Map className="w-5 h-5" />
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-base mb-1">Adventure Templates</h3>
@@ -210,7 +250,7 @@ export default function StartMenu({
               </div>
             </div>
             <Button
-              variant={!hasActiveGame ? "default" : "outline"}
+              variant="outline"
               onClick={() => {
                 console.log('[StartMenu] Adventure Templates button clicked');
                 analytics.buttonClicked('Start Adventure', 'Start Menu', {
@@ -219,17 +259,10 @@ export default function StartMenu({
                 onShowAdventureTemplates();
               }}
               className="w-full font-semibold"
-              size={!hasActiveGame ? "lg" : "default"}
               data-testid="button-adventure-templates"
             >
-              {!hasActiveGame && <Sparkles className="w-4 h-4 mr-2" />}
-              Start Adventure
+              Browse Templates
             </Button>
-            {!hasActiveGame && (
-              <p className="text-xs text-center text-muted-foreground mt-2">
-                Quickest way to begin playing
-              </p>
-            )}
           </Card>
 
           {/* Create New Character */}

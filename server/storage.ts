@@ -196,6 +196,12 @@ export class MemStorage implements IStorage {
         worldTheme: null,
         worldDescription: null,
         generatedFromCharacter: false,
+        totalPages: null,
+        currentPage: 0,
+        storyLength: null,
+        genre: null,
+        characterDescription: null,
+        storyComplete: false,
       };
     }
 
@@ -573,6 +579,12 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
       worldTheme: state.worldTheme ?? null,
       worldDescription: state.worldDescription ?? null,
       generatedFromCharacter: state.generatedFromCharacter ?? false,
+      totalPages: state.totalPages ?? null,
+      currentPage: state.currentPage ?? 0,
+      storyLength: state.storyLength ?? null,
+      genre: state.genre ?? null,
+      characterDescription: state.characterDescription ?? null,
+      storyComplete: state.storyComplete ?? false,
     };
     this.gameState = newGameState;
     return this.gameState;
