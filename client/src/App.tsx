@@ -251,14 +251,15 @@ function GameApp() {
   const handleEndAdventure = async () => {
     try {
       if (activeStoryId) {
-        await apiRequest('DELETE', `/api/stories/${activeStoryId}`);
-      } else {
-        await apiRequest('POST', '/api/adventure/reset', {});
+        // Mark story as finished (not delete) so it appears on the Finished shelf
+        await apiRequest('PATCH', '/api/game-state', { storyComplete: true });
       }
       navigateToBookshelf();
       analytics.trackEvent("adventure_ended");
     } catch (error) {
       console.error('Failed to end adventure:', error);
+      // Still navigate back even if the API call fails
+      navigateToBookshelf();
     }
   };
 

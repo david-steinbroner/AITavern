@@ -1171,7 +1171,8 @@ Do NOT re-state the character description back to the reader. Instead, SHOW who 
   app.patch("/api/game-state", async (req, res) => {
     try {
       const sessionId = getSessionId(req);
-      const gameState = await storage.updateGameState(sessionId, req.body);
+      const storyId = getStoryId(req);
+      const gameState = await storage.updateGameState(sessionId, req.body, storyId);
       res.json(gameState);
     } catch (error) {
       console.error('Error updating game state:', error);
