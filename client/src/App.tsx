@@ -1,9 +1,7 @@
 import { queryClient, apiRequest, setActiveStoryId } from "./lib/queryClient";
 import { QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 
 // Components
@@ -12,7 +10,6 @@ import ChatInterface from "./components/ChatInterface";
 import ColdStartLoader from "./components/ColdStartLoader";
 import Bookshelf from "./components/Bookshelf";
 import NewStoryCreation from "./components/NewStoryCreation";
-import ThemeToggle from "./components/ThemeToggle";
 import { useAnalytics, useSessionTracking } from "./hooks/useAnalytics";
 import { useToast } from "./hooks/use-toast";
 import { setUserContext, setGameContext } from "./lib/sentry";
@@ -301,33 +298,6 @@ function GameApp() {
       />
 
       <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
-        {/* Minimal header */}
-        <div className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border shrink-0">
-          <div className="flex items-center justify-between h-12 px-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                console.log('[App] Return to bookshelf');
-                analytics.buttonClicked('Return to Bookshelf', 'Top Navigation');
-                navigateToBookshelf();
-              }}
-              className="text-muted-foreground min-h-[44px]"
-              data-testid="button-return-menu"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              <span className="text-sm">Library</span>
-            </Button>
-            <h1 className="font-bold text-sm text-primary" data-testid="app-title">
-              Story Mode
-            </h1>
-            <div className="min-w-[44px] flex justify-end">
-              <ThemeToggle />
-            </div>
-          </div>
-        </div>
-
-        {/* Chat */}
         <main className="flex-1 overflow-hidden flex flex-col">
           {messagesLoading ? (
             <div className="flex items-center justify-center h-full">
@@ -342,6 +312,7 @@ function GameApp() {
               quests={quests}
               gameState={gameState}
               onEndAdventure={handleEndAdventure}
+              onNavigateToBookshelf={navigateToBookshelf}
               className="flex-1"
             />
           )}

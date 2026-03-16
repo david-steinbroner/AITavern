@@ -1,11 +1,27 @@
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import EmptyState from "./EmptyState";
-import { MessageSquare, Loader2, XCircle, RefreshCw, Send, Settings, Minus, Plus } from "lucide-react";
+import { MessageSquare, Loader2, RefreshCw, Send, Minus, Plus, MoreVertical, BookOpen, XCircle, ChevronUp } from "lucide-react";
 import type { Message, Character, Quest, Item, GameState } from "@shared/schema";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { analytics } from "@/lib/posthog";
 import { useToast } from "@/hooks/use-toast";
 import { captureError, addBreadcrumb } from "@/lib/sentry";
@@ -16,6 +32,7 @@ interface ChatInterfaceProps {
   isLoading?: boolean;
   className?: string;
   onEndAdventure?: () => void;
+  onNavigateToBookshelf?: () => void;
   character?: Character;
   quests?: Quest[];
   items?: Item[];
@@ -71,6 +88,7 @@ export default function ChatInterface({
   isLoading = false,
   className = "",
   onEndAdventure,
+  onNavigateToBookshelf,
   character,
   quests = [],
   items = [],
@@ -79,14 +97,65 @@ export default function ChatInterface({
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [inputText, setInputText] = useState("");
   const [fontSizeIndex, setFontSizeIndex] = useState(getInitialFontSizeIndex);
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const lastMessageRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  // Extract choices from the latest AI message
+  const latestChoices = useMemo(() => {
+    const lastAiMessage = [...messages].reverse().find(m => m.sender !== 'player');
+    if (!lastAiMessage) return [];
+    const { options } = parseMessageContent(lastAiMessage.content);
+    return options;
+  }, [messages]);
+
+  const showDrawer = latestChoices.length > 0 && !isLoading && !gameState?.storyComplete;
+
+  // Auto-expand drawer when new choices arrive
+  const prevChoicesRef = useRef<string[]>([]);
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (latestChoices.length > 0 && latestChoices !== prevChoicesRef.current) {
+      const choicesChanged = latestChoices.join('|') !== prevChoicesRef.current.join('|');
+      if (choicesChanged) {
+        setIsDrawerOpen(true);
+        setShowCustomInput(false);
+        setInputText("");
+      }
+    }
+    prevChoicesRef.current = latestChoices;
+  }, [latestChoices]);
+
+  // Collapse drawer when loading starts
+  useEffect(() => {
+    if (isLoading) {
+      setIsDrawerOpen(false);
+    }
+  }, [isLoading]);
+
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.sender === 'player') {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    } else {
+      lastMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [messages]);
+
+  // Close drawer when tapping outside
+  useEffect(() => {
+    if (!isDrawerOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
+        setIsDrawerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [isDrawerOpen]);
 
   const currentFontSize = FONT_SIZES[fontSizeIndex];
 
@@ -96,6 +165,30 @@ export default function ChatInterface({
       try { localStorage.setItem(FONT_SIZE_STORAGE_KEY, String(next)); } catch {}
       return next;
     });
+  };
+
+  const handleChoiceSelect = (option: string) => {
+    console.log('[ChatInterface] Quick action option clicked', {
+      option: option.substring(0, 50)
+    });
+    analytics.buttonClicked('Quick Action Option', 'Chat Interface', {
+      option_preview: option.substring(0, 50)
+    });
+    analytics.messageSent('action');
+    setIsDrawerOpen(false);
+    setShowCustomInput(false);
+    setInputText("");
+    onSendMessage?.(option);
+  };
+
+  const handleCustomSubmit = () => {
+    if (inputText.trim()) {
+      analytics.messageSent('chat');
+      onSendMessage?.(inputText);
+      setInputText("");
+      setShowCustomInput(false);
+      setIsDrawerOpen(false);
+    }
   };
 
   const handleCopyDebugInfo = () => {
@@ -186,7 +279,6 @@ ${JSON.stringify(debugInfo, null, 2)}
     console.log('[ChatInterface] Report Issue button clicked');
     analytics.buttonClicked('Report Issue', 'Chat Interface');
 
-    // Capture comprehensive debug info for Sentry
     const issueContext = {
       character: character ? {
         id: character.id,
@@ -212,13 +304,11 @@ ${JSON.stringify(debugInfo, null, 2)}
       }))
     };
 
-    // Add breadcrumb trail
     addBreadcrumb('User reported issue from chat', {
       messageCount: messages.length,
       lastMessageSender: messages[messages.length - 1]?.sender
     });
 
-    // Capture as error in Sentry
     const error = new Error('User reported chat issue');
     error.name = 'UserReportedIssue';
     captureError(error, {
@@ -242,7 +332,6 @@ ${JSON.stringify(debugInfo, null, 2)}
       lastMessageId: messages[messages.length - 1]?.id
     });
 
-    // Get the last player message to re-send
     const lastPlayerMessage = [...messages].reverse().find(m => m.sender === 'player');
 
     if (lastPlayerMessage) {
@@ -252,7 +341,6 @@ ${JSON.stringify(debugInfo, null, 2)}
         player_message: lastPlayerMessage.content.substring(0, 100)
       });
 
-      // Re-send the message to get a new AI response
       onSendMessage?.(lastPlayerMessage.content);
 
       toast({
@@ -281,208 +369,239 @@ ${JSON.stringify(debugInfo, null, 2)}
         return <Badge variant="outline" className="rounded-full">You</Badge>;
     }
   };
-  
+
   return (
-    <div className={`h-full flex flex-col ${className}`} data-testid="chat-interface">
-      <Card className="flex-1 flex flex-col overflow-hidden">
-        {/* Clean minimal header */}
-        <div className="px-4 py-2.5 border-b flex items-center justify-between">
-          <h2 className="font-semibold text-foreground text-sm">Your Story</h2>
-          <div className="flex items-center gap-2">
-            {gameState?.totalPages && gameState.totalPages > 0 && (
-              <span className="text-xs text-muted-foreground">
-                {gameState.storyComplete
-                  ? "Complete"
-                  : `Page ${gameState.currentPage || 1} of ${gameState.totalPages}`}
-              </span>
+    <div className={`h-full flex flex-col relative ${className}`} data-testid="chat-interface">
+      {/* Sticky top nav bar */}
+      <div className="sticky top-0 z-30 border-b border-border shrink-0" style={{ backgroundColor: '#FFF9F0' }}>
+        <div className="flex items-center justify-between h-12 px-3">
+          <span className="font-bold text-sm text-primary">Story Mode</span>
+          <span className="text-xs text-muted-foreground">
+            {gameState?.totalPages && gameState.totalPages > 0
+              ? gameState.storyComplete
+                ? "Complete"
+                : `Page ${gameState.currentPage || 1} of ${gameState.totalPages}`
+              : ""}
+          </span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreVertical className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem
+                onClick={() => {
+                  analytics.buttonClicked('Back to Library', 'Story Menu');
+                  onNavigateToBookshelf?.();
+                }}
+              >
+                <BookOpen className="w-4 h-4 mr-2" />
+                Back to Library
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                Text Size
+              </DropdownMenuLabel>
+              <div className="flex items-center justify-between px-2 py-1.5">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => changeFontSize(-1)}
+                  disabled={fontSizeIndex === 0}
+                >
+                  <Minus className="w-3 h-3" />
+                </Button>
+                <span className="text-sm text-foreground">{currentFontSize.label}</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => changeFontSize(1)}
+                  disabled={fontSizeIndex === FONT_SIZES.length - 1}
+                >
+                  <Plus className="w-3 h-3" />
+                </Button>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setShowEndConfirm(true)}
+                className="text-destructive focus:text-destructive"
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                End Story
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* End Story confirmation dialog */}
+      <AlertDialog open={showEndConfirm} onOpenChange={setShowEndConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>End this story?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark the story as finished and return you to the library. You can still read it later from the Finished shelf.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Reading</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                console.log('[ChatInterface] End Story confirmed');
+                analytics.buttonClicked('End Story Confirmed', 'Chat Interface');
+                onEndAdventure?.();
+              }}
+            >
+              End Story
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Messages - flexible height, with bottom padding for drawer */}
+      <div
+        className="flex-1 overflow-auto px-4 sm:px-6 py-4"
+        ref={scrollRef}
+        style={{ paddingBottom: showDrawer ? 56 : 16 }}
+      >
+        <div className="space-y-3 sm:space-y-4 max-w-full">
+            {messages.length === 0 ? (
+              <EmptyState
+                icon={MessageSquare}
+                title="No messages yet"
+                description="Start your adventure by speaking or using quick actions!"
+              />
+            ) : (
+              messages.map((message, index) => {
+                const { text } = parseMessageContent(message.content);
+                const isPlayer = message.sender === "player";
+                const isLast = index === messages.length - 1;
+
+                return (
+                  <div key={message.id} ref={isLast ? lastMessageRef : undefined} className="space-y-1.5 max-w-full">
+                    <div className="flex items-center gap-2">
+                      {getSenderBadge(message.sender, message.senderName)}
+                      <span className="text-xs text-muted-foreground">{message.timestamp}</span>
+                    </div>
+                    <div className={`p-2.5 sm:p-3 rounded-lg max-w-full overflow-hidden ${
+                      isPlayer
+                        ? "bg-primary/10 border-l-4 border-primary ml-2 sm:ml-4"
+                        : "bg-muted/50"
+                    }`}>
+                      <p className="leading-relaxed text-foreground whitespace-pre-line break-words" style={{ fontSize: `${currentFontSize.px}px` }}>{text}</p>
+                    </div>
+                  </div>
+                );
+              })
             )}
-            <Popover>
-              <PopoverTrigger asChild>
+
+            {/* AI Thinking Indicator */}
+            {isLoading && (
+              <div className="flex items-center gap-2 p-2.5 sm:p-3 rounded-lg bg-muted/50 animate-pulse">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <p className="text-sm text-muted-foreground">Your narrator is thinking...</p>
+              </div>
+            )}
+
+            {/* Regenerate Response Button (after AI response, when not loading) */}
+            {!isLoading && messages.length > 0 && messages[messages.length - 1].sender !== 'player' && (
+              <div className="flex justify-center mt-2">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-xs text-muted-foreground h-7 px-2"
+                  onClick={handleRegenerateResponse}
+                  className="text-xs text-muted-foreground hover:text-foreground"
                 >
-                  <Settings className="w-3.5 h-3.5" />
+                  <RefreshCw className="w-3 h-3 mr-1" />
+                  Regenerate response
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48 p-3" align="center">
-                <p className="text-xs font-medium text-foreground mb-2">Text Size</p>
-                <div className="flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => changeFontSize(-1)}
-                    disabled={fontSizeIndex === 0}
-                  >
-                    <Minus className="w-3.5 h-3.5" />
-                  </Button>
-                  <span className="text-sm text-foreground">{currentFontSize.label}</span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => changeFontSize(1)}
-                    disabled={fontSizeIndex === FONT_SIZES.length - 1}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
+              </div>
+            )}
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              console.log('[ChatInterface] End Story button clicked');
-              analytics.buttonClicked('End Story', 'Chat Interface');
-              onEndAdventure?.();
-            }}
-            className="text-xs text-muted-foreground h-7 px-2"
-          >
-            <XCircle className="w-3.5 h-3.5 mr-1" />
-            End
-          </Button>
         </div>
 
-        {/* Messages - flexible height */}
-        <div className="flex-1 overflow-auto px-4 sm:px-6 py-4" ref={scrollRef}>
-          <div className="space-y-3 sm:space-y-4 max-w-full">
-              {messages.length === 0 ? (
-                <EmptyState
-                  icon={MessageSquare}
-                  title="No messages yet"
-                  description="Start your adventure by speaking or using quick actions!"
-                />
-              ) : (
-                messages.map((message) => {
-                  const { text, options } = parseMessageContent(message.content);
-                  const isPlayer = message.sender === "player";
-
-                  return (
-                    <div key={message.id} className="space-y-1.5 max-w-full">
-                      <div className="flex items-center gap-2">
-                        {getSenderBadge(message.sender, message.senderName)}
-                        <span className="text-xs text-muted-foreground">{message.timestamp}</span>
-                      </div>
-                      <div className={`p-2.5 sm:p-3 rounded-lg max-w-full overflow-hidden ${
-                        isPlayer
-                          ? "bg-primary/10 border-l-4 border-primary ml-2 sm:ml-4"
-                          : "bg-muted/50"
-                      }`}>
-                        <p className="leading-relaxed text-foreground whitespace-pre-line break-words" style={{ fontSize: `${currentFontSize.px}px` }}>{text}</p>
-
-                        {/* Render clickable options for DM/NPC messages */}
-                        {!isPlayer && options.length > 0 && (
-                          <div className="mt-3 space-y-2">
-                            <p className="text-xs sm:text-sm font-semibold text-foreground">What do you do?</p>
-                            {options.map((option, index) => (
-                              <Button
-                                key={index}
-                                variant="outline"
-                                size="sm"
-                                className="w-full justify-start text-left h-auto py-2.5 px-3 min-h-[44px] whitespace-normal"
-                                onClick={() => {
-                                  console.log('[ChatInterface] Quick action option clicked', {
-                                    option: option.substring(0, 50)
-                                  });
-                                  analytics.buttonClicked('Quick Action Option', 'Chat Interface', {
-                                    option_preview: option.substring(0, 50)
-                                  });
-                                  analytics.messageSent('action');
-                                  setShowCustomInput(false);
-                                  setInputText("");
-                                  onSendMessage?.(option);
-                                }}
-                                disabled={isLoading}
-                              >
-                                <span className="text-sm leading-snug break-words">{option}</span>
-                              </Button>
-                            ))}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-full justify-start text-left h-auto py-2.5 px-3 min-h-[44px] whitespace-normal text-muted-foreground italic"
-                              onClick={() => {
-                                analytics.buttonClicked('Custom Input', 'Chat Interface');
-                                setShowCustomInput(true);
-                              }}
-                              disabled={isLoading}
-                            >
-                              <span className="text-sm leading-snug break-words">I have something else in mind...</span>
-                            </Button>
-                            {showCustomInput && (
-                              <div className="flex gap-2 mt-1">
-                                <input
-                                  type="text"
-                                  placeholder="What would you do?"
-                                  value={inputText}
-                                  onChange={(e) => setInputText(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" && inputText.trim()) {
-                                      analytics.messageSent('chat');
-                                      onSendMessage?.(inputText);
-                                      setInputText("");
-                                      setShowCustomInput(false);
-                                    }
-                                  }}
-                                  autoFocus
-                                  className="flex-1 px-3 py-2.5 bg-muted rounded-md text-sm text-foreground placeholder:text-muted-foreground border border-input focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
-                                  disabled={isLoading}
-                                />
-                                <Button
-                                  size="icon"
-                                  onClick={() => {
-                                    if (inputText.trim()) {
-                                      analytics.messageSent('chat');
-                                      onSendMessage?.(inputText);
-                                      setInputText("");
-                                      setShowCustomInput(false);
-                                    }
-                                  }}
-                                  disabled={!inputText.trim() || isLoading}
-                                  className="h-11 w-11 shrink-0"
-                                >
-                                  <Send className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-
-              {/* AI Thinking Indicator */}
-              {isLoading && (
-                <div className="flex items-center gap-2 p-2.5 sm:p-3 rounded-lg bg-muted/50 animate-pulse">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <p className="text-sm text-muted-foreground">Your narrator is thinking...</p>
-                </div>
-              )}
-
-              {/* Regenerate Response Button (after AI response, when not loading) */}
-              {!isLoading && messages.length > 0 && messages[messages.length - 1].sender !== 'player' && (
-                <div className="flex justify-center mt-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleRegenerateResponse}
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    <RefreshCw className="w-3 h-3 mr-1" />
-                    Regenerate response
-                  </Button>
-                </div>
-              )}
+      {/* Bottom choices drawer */}
+      {showDrawer && (
+        <div
+          ref={drawerRef}
+          className="absolute bottom-0 left-0 right-0 z-20 rounded-t-xl border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.08)] transition-all duration-300 ease-in-out"
+          style={{
+            backgroundColor: '#FFF9F0',
+            maxHeight: isDrawerOpen ? '50vh' : '3.5rem',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Drawer handle / collapsed bar */}
+          <button
+            onClick={() => setIsDrawerOpen(!isDrawerOpen)}
+            className="w-full flex flex-col items-center pt-2 pb-3 px-4"
+          >
+            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mb-2" />
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <span>What happens next?</span>
+              <ChevronUp
+                className="w-4 h-4 transition-transform duration-300"
+                style={{ transform: isDrawerOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+              />
             </div>
-          </div>
+          </button>
 
-      </Card>
+          {/* Expanded choices content */}
+          <div className="px-4 pb-4 space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(50vh - 3.5rem)' }}>
+            {latestChoices.map((option, index) => (
+              <Button
+                key={index}
+                variant="outline"
+                size="sm"
+                className="w-full justify-start text-left h-auto py-2.5 px-3 min-h-[44px] whitespace-normal"
+                onClick={() => handleChoiceSelect(option)}
+                disabled={isLoading}
+              >
+                <span className="text-sm leading-snug break-words">{option}</span>
+              </Button>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start text-left h-auto py-2.5 px-3 min-h-[44px] whitespace-normal text-muted-foreground italic"
+              onClick={() => {
+                analytics.buttonClicked('Custom Input', 'Chat Interface');
+                setShowCustomInput(true);
+              }}
+              disabled={isLoading}
+            >
+              <span className="text-sm leading-snug break-words">I have something else in mind...</span>
+            </Button>
+            {showCustomInput && (
+              <div className="flex gap-2 mt-1">
+                <input
+                  type="text"
+                  placeholder="What would you do?"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleCustomSubmit();
+                  }}
+                  autoFocus
+                  className="flex-1 px-3 py-2.5 bg-muted rounded-md text-sm text-foreground placeholder:text-muted-foreground border border-input focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+                  disabled={isLoading}
+                />
+                <Button
+                  size="icon"
+                  onClick={handleCustomSubmit}
+                  disabled={!inputText.trim() || isLoading}
+                  className="h-11 w-11 shrink-0"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
