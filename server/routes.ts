@@ -512,7 +512,16 @@ Your job: Create the opening page. Establish the world, introduce the reader's c
 
 Do NOT re-state the character description back to the reader. Instead, SHOW who they are through the opening scene.`;
 
-      const aiResponse = await aiService.generateResponse(sessionId, firstPagePrompt, storyId);
+      let aiResponse = await aiService.generateResponse(sessionId, firstPagePrompt, storyId);
+
+      // If the first AI call failed with a parse error (intermittent on new stories),
+      // retry once — the internal retry in generateResponse handles most cases,
+      // but this catches any remaining edge cases at the route level.
+      if (aiResponse.error === 'parse_failure') {
+        console.log('[Story New] First AI response had parse_failure, retrying at route level');
+        await new Promise(resolve => setTimeout(resolve, 200));
+        aiResponse = await aiService.generateResponse(sessionId, firstPagePrompt, storyId);
+      }
 
       // Track token spend
       if (aiResponse.tokenUsage) {

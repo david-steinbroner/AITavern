@@ -406,13 +406,14 @@ CHARACTER PROGRESSION:
     }
   }
 
-  async generateResponse(sessionId: string, playerMessage: string, storyId?: string): Promise<AIResponse> {
+  async generateResponse(sessionId: string, playerMessage: string, storyId?: string, retryAttempt: boolean = false): Promise<AIResponse> {
     const startTime = Date.now();
     console.log('[AI Service] Starting AI response generation', {
       sessionId,
       storyId,
       playerMessage: playerMessage.substring(0, 100),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      retryAttempt
     });
 
     try {
@@ -655,10 +656,20 @@ Example Quest Actions:
             secondError: secondError.message
           });
 
-          console.error('[AI Service] ⚠️ RETURNING FALLBACK RESPONSE DUE TO PARSE FAILURE');
+          // Before giving up, retry the AI call once with fresh context
+          // This fixes an intermittent issue where the first AI call on a new story
+          // gets stale/incomplete context from the database, producing malformed JSON.
+          // By the time we retry, the DB writes have settled.
+          if (!retryAttempt) {
+            console.log('[AI Service] Parse failure on first attempt — retrying with fresh context after 150ms delay');
+            await new Promise(resolve => setTimeout(resolve, 150));
+            return this.generateResponse(sessionId, playerMessage, storyId, true);
+          }
+
+          console.error('[AI Service] ⚠️ RETURNING FALLBACK RESPONSE DUE TO PARSE FAILURE (after retry)');
 
           return {
-            content: "The narrator pauses, gathering their thoughts... (There was an issue processing the response. Please try again.)",
+            content: "Your Guide pauses, gathering their thoughts... (There was an issue processing the response. Please try again.)",
             sender: 'dm',
             senderName: null,
             actions: undefined,
