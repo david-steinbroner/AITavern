@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import EmptyState from "./EmptyState";
-import { MessageSquare, Loader2, RefreshCw, Send, Minus, Plus, MoreVertical, BookOpen, XCircle, ChevronUp } from "lucide-react";
+import { MessageSquare, Loader2, RefreshCw, Send, Minus, Plus, MoreVertical, BookOpen, XCircle, ChevronUp, ChevronDown } from "lucide-react";
 import type { Message, Character, Quest, Item, GameState } from "@shared/schema";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { analytics } from "@/lib/posthog";
@@ -99,6 +99,7 @@ export default function ChatInterface({
   const [fontSizeIndex, setFontSizeIndex] = useState(getInitialFontSizeIndex);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isScrolledUp, setIsScrolledUp] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
@@ -143,6 +144,22 @@ export default function ChatInterface({
       lastMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [messages]);
+
+  // Track scroll position for scroll-to-bottom button
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      setIsScrolledUp(distanceFromBottom > 100);
+    };
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToBottom = () => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  };
 
   // Close drawer when tapping outside
   useEffect(() => {
@@ -370,7 +387,7 @@ ${JSON.stringify(debugInfo, null, 2)}
   };
 
   return (
-    <div className={`h-full flex flex-col relative ${className}`} data-testid="chat-interface">
+    <div className={`h-full min-h-0 flex flex-col relative ${className}`} data-testid="chat-interface">
       {/* Fixed top nav bar — sits outside the scroll container */}
       <div className="z-30 border-b border-border shrink-0" style={{ backgroundColor: '#FFF9F0' }}>
         <div className="flex items-center justify-between h-12 px-3">
@@ -462,7 +479,7 @@ ${JSON.stringify(debugInfo, null, 2)}
 
       {/* Messages - flexible height, with bottom padding for drawer */}
       <div
-        className="flex-1 overflow-auto px-4 sm:px-6 py-4"
+        className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4"
         ref={scrollRef}
         style={{ paddingBottom: showDrawer ? 56 : 16 }}
       >
@@ -521,6 +538,18 @@ ${JSON.stringify(debugInfo, null, 2)}
             )}
           </div>
         </div>
+
+      {/* Scroll to bottom button */}
+      {isScrolledUp && (
+        <button
+          onClick={scrollToBottom}
+          className="absolute z-20 right-4 bg-card border border-border rounded-full p-2 shadow-md hover:bg-accent/10 transition-colors"
+          style={{ bottom: showDrawer ? 68 : 20 }}
+          aria-label="Scroll to latest"
+        >
+          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+        </button>
+      )}
 
       {/* Bottom choices drawer */}
       {showDrawer && (

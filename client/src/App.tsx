@@ -97,6 +97,25 @@ function GameApp() {
   }, [currentView, quests]);
   // AI Chat mutation
   const aiChatMutation = useMutation({
+    onMutate: async (message: string) => {
+      // Optimistic update: show the player's message immediately
+      await queryClient.cancelQueries({ queryKey: ['/api/messages', activeStoryId] });
+      const previousMessages = queryClient.getQueryData<Message[]>(['/api/messages', activeStoryId]);
+      const optimisticMessage: Message = {
+        id: `optimistic-${Date.now()}`,
+        sender: 'player',
+        senderName: null,
+        content: message,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sessionId: '',
+        storyId: activeStoryId,
+      };
+      queryClient.setQueryData<Message[]>(
+        ['/api/messages', activeStoryId],
+        (old = []) => [...old, optimisticMessage]
+      );
+      return { previousMessages };
+    },
     mutationFn: async (message: string) => {
       const startTime = Date.now();
       console.log('[App] Sending message to AI:', message.substring(0, 100));
@@ -206,8 +225,12 @@ function GameApp() {
       queryClient.invalidateQueries({ queryKey: ['/api/game-state', activeStoryId] });
       queryClient.invalidateQueries({ queryKey: ['/api/enemies'] });
     },
-    onError: (error: any) => {
+    onError: (error: any, _variables: string, context: { previousMessages?: Message[] } | undefined) => {
       console.error('[App] AI mutation error:', error);
+      // Rollback optimistic update on error
+      if (context?.previousMessages) {
+        queryClient.setQueryData(['/api/messages', activeStoryId], context.previousMessages);
+      }
     }
   });
   
@@ -237,10 +260,14 @@ function GameApp() {
   };
 
   const handleEndAdventure = async () => {
+    // Capture storyId before any state changes clear it
+    const storyIdToEnd = activeStoryId;
     try {
-      if (activeStoryId) {
+      if (storyIdToEnd) {
         // Mark story as finished (not delete) so it appears on the Finished shelf
+        // PATCH must complete before navigateToBookshelf clears _activeStoryId
         await apiRequest('PATCH', '/api/game-state', { storyComplete: true });
+        console.log('[App] Story marked complete:', storyIdToEnd);
       }
       navigateToBookshelf();
       analytics.trackEvent("adventure_ended");

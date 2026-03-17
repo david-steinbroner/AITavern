@@ -310,7 +310,7 @@ The core product pivot is complete — Story Mode is now a page-based interactiv
    - Smart auto-scroll: AI messages scroll to top of new text, player messages scroll to bottom
    - Font size persisted in localStorage (Small/Medium/Large/X-Large)
 5. **Remove emoji icons** ✅ — Stripped all decorative icons and emojis from Bookshelf, NewStoryCreation, ChatInterface, App, and ColdStartLoader. Only functional icons remain.
-6. **"Surprise me" button** ✅ — Calls `POST /api/story/surprise-me` for AI-generated character descriptions (Claude 3.5 Haiku, max_tokens: 150).
+6. **"Surprise me" button** ✅ — Calls `POST /api/story/surprise-me` for AI-generated character descriptions (Claude 3.5 Haiku, max_tokens: 90, 1-2 sentences).
 7. **Genre step removed** ✅ — Story creation simplified from 3 steps to 2 (page count → character description). AI infers genre from the character description. Genre stored as "auto" in the database.
 8. **Info box → popover tooltip** ✅ — Replaced the character description info box with a small (i) icon popover.
 
@@ -328,11 +328,31 @@ The core product pivot is complete — Story Mode is now a page-based interactiv
 
 ## 9b. Current Milestone
 
-**Milestone 6: Your Guide — Interactive Chatbot on the Bookshelf**
+**Milestone 6: Your Guide — Interactive Chatbot + Bookshelf Nav**
 
-**Goal:** Turn the static Guide mascot on the bookshelf into a real conversational character that helps users navigate the app and get inspired. Hybrid approach: canned responses for common actions (no AI cost), AI-powered responses for open-ended questions.
+**Goal:** Two things: (1) Turn the static Guide mascot on the bookshelf into a real conversational character that helps users navigate the app and get inspired. (2) Add a proper nav bar / menu to the bookshelf screen, mirroring the menu already in the story reading screen.
 
-**Foundation (already built):**
+---
+
+### Pre-work completed this session (before Guide chatbot build):
+
+**Bug fixes shipped:**
+- **Story view showed "No messages yet"** ✅ — Two root causes fixed: `queryClient.ts` was building fetch URLs via `queryKey.join("/")`, producing `/api/messages/uuid` (no matching route). Fixed to use `queryKey[0]` only. Also fixed timing issue where `_activeStoryId` module variable was set via `useEffect` (after render) instead of synchronously in `enterStory`/`navigateToBookshelf`.
+- **New story button missing when all stories archived** ✅ — Condition `completedStories.length > 0` was filtering out archived stories. Fixed to `stories.length > 0` so the button always appears when stories exist.
+
+**Features shipped:**
+- **Archive for finished stories** ✅ — Long-press a finished book spine → popover with "Archive" action. Archived stories removed from Finished shelf, accessible via "Archive (n)" link. Unarchive by long-pressing in archive section. State persisted in localStorage (`story-mode-archived-ids`).
+
+**UI polish shipped:**
+- **Nav bar persistence** ✅ — Removed `sticky top-0` from ChatInterface nav bar; the flex layout already keeps it fixed since only the messages div scrolls.
+- **Choices drawer defaults to collapsed** ✅ — Removed `setIsDrawerOpen(true)` from the `latestChoices` effect. Users must tap "What happens next?" to expand.
+- **Shorter "Surprise me" text** ✅ — `max_tokens` reduced from 150 → 90, prompt updated to "1-2 sentences max."
+
+---
+
+### Guide chatbot — not yet built:
+
+**Foundation (already built before this milestone):**
 - `GuideConfirmDialog.tsx` — Reusable modal dialog (cream background, pastel palette, min 44px tap targets). Props: title, description, children slot, confirm/cancel labels, callbacks.
 - `GuideStoryCard.tsx` — Presentational card showing story info (genre badge with color coding, page progress, character description, progress bar). Slots into GuideConfirmDialog.
 
@@ -362,14 +382,30 @@ Each canned response flows through a `GuideConfirmDialog` for confirmation befor
 
 **Cost estimate:** ~$0.001-0.002 per AI-powered Guide interaction. Most interactions will be canned (free).
 
-**Task breakdown:**
-1. Build `GuideChat.tsx` — modal UI with message list, text input, Guide avatar
+---
+
+### Bookshelf nav bar / menu — not yet built:
+
+The bookshelf header currently has "Story Mode / Your Library" on the left and the GuideAvatar on the right. It needs a proper menu matching the story reading screen.
+
+**Menu contents (three-dot dropdown, same shadcn DropdownMenu pattern as ChatInterface):**
+- Text size controls (+/- with Small/Medium/Large/X-Large labels) — shared localStorage key `storymode-font-size` so size is consistent across views
+- Archive — opens/closes the archive section (replaces the current inline "Archive (n)" link in the Finished shelf header)
+- Admin — navigates to `/admin`
+
+**Layout:** Header stays the same (title left, GuideAvatar right), three-dot icon added between them or at far right next to the avatar.
+
+---
+
+### Full task breakdown (remaining):
+1. Build `GuideChat.tsx` — slide-up modal UI with message list, text input, Guide avatar
 2. Implement client-side intent matcher — keyword matching for canned intents
 3. Wire canned intents to confirmation dialogs using existing `GuideConfirmDialog` + `GuideStoryCard`
 4. Build `POST /api/guide/chat` endpoint with short Guide-specific system prompt
 5. Connect AI fallback for unmatched intents
 6. Wire GuideChat to the Guide mascot tap on Bookshelf
-7. Test all flows: resume, new story, delete, help, clear data, AI freeform
+7. Add three-dot menu to Bookshelf header (text size, archive toggle, admin link)
+8. Test all flows: resume, new story, delete, help, clear data, AI freeform, menu items
 
 **Out of scope:**
 - Guide appearing during active stories
@@ -417,14 +453,14 @@ Added act-based pacing guidance so the AI shapes the narrative arc across the fu
 | `server/aiService.ts` | All AI calls. Prompt construction with pacing guidance, rolling summary integration, response parsing, action execution. Returns `tokenUsage` for cost tracking. |
 | `server/summaryService.ts` | Rolling story summary generation. Condenses older messages into narrative summaries every 10 messages. |
 | `server/spendTracker.ts` | Real-time cost tracking with actual token counts. Tracks daily/all-time spend, per-session usage. Provides admin stats. |
-| `client/src/App.tsx` | 3-view routing (bookshelf → newStory → game) and top-level state. Game view delegates all UI to ChatInterface. Complex — be careful here. |
-| `client/src/components/Bookshelf.tsx` | Main landing screen. Virtual bookshelf with book spines, quick-continue card, GuideAvatar mascot. |
-| `client/src/components/NewStoryCreation.tsx` | 2-step story creation wizard: page count → character description. Includes "Surprise me" AI character generator. |
-| `client/src/components/ChatInterface.tsx` | Story reading screen. Sticky nav bar, message display, collapsible bottom drawer for choices, font size controls, End Story confirmation. |
+| `client/src/App.tsx` | 3-view routing (bookshelf → newStory → game) and top-level state. `enterStory()` and `navigateToBookshelf()` set `_activeStoryId` synchronously before invalidating queries. Complex — be careful here. |
+| `client/src/components/Bookshelf.tsx` | Main landing screen. Virtual bookshelf with book spines, quick-continue card, GuideAvatar mascot. Includes client-side archive feature (localStorage). Long-press finished spines to archive/unarchive. |
+| `client/src/components/NewStoryCreation.tsx` | 2-step story creation wizard: page count → character description. Includes "Surprise me" AI character generator (max_tokens: 90, 1-2 sentences). |
+| `client/src/components/ChatInterface.tsx` | Story reading screen. Fixed nav bar (non-sticky, flex layout keeps it pinned), message display, collapsible bottom drawer for choices (defaults collapsed), font size controls, End Story confirmation. |
 | `client/src/components/GuideConfirmDialog.tsx` | Reusable confirmation modal for Guide chatbot actions. Built on shadcn AlertDialog with brand palette. Props: title, description, children slot, confirm/cancel labels. |
 | `client/src/components/GuideStoryCard.tsx` | Presentational story info card (genre badge, page progress, character description). Slots into GuideConfirmDialog. Genre colors match bookshelf spines. |
 | `client/src/components/StoryProgress.tsx` | Page progress bar with pacing phase labels. Not currently rendered (removed from game view) but kept for future repurposing. |
-| `client/src/lib/queryClient.ts` | API request helpers. Adds `x-session-id` header to all requests. |
+| `client/src/lib/queryClient.ts` | API request helpers. Adds `x-session-id` and `x-story-id` headers to all requests. `getQueryFn` uses `queryKey[0]` as the fetch URL (not the full joined key — extra elements are for cache differentiation only). |
 | `client/src/components/AdminDashboard.tsx` | Internal admin UI at `/admin`. Shows spend metrics, session stats. Protected by admin key prompt. |
 | `client/src/lib/posthog.ts` | Analytics. Don't remove events — add to them. |
 | `.env.example` | All required env vars documented here. Includes `DATABASE_URL` and `ADMIN_KEY`. |
