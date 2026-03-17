@@ -55,15 +55,15 @@ function GameApp() {
   });
 
   const { data: messages = [], isLoading: messagesLoading } = useQuery<Message[]>({
-    queryKey: ['/api/messages'],
+    queryKey: ['/api/messages', activeStoryId],
   });
 
   const { data: gameState } = useQuery<GameState>({
-    queryKey: ['/api/game-state'],
+    queryKey: ['/api/game-state', activeStoryId],
   });
 
   const { data: quests = [] } = useQuery<Quest[]>({
-    queryKey: ['/api/quests'],
+    queryKey: ['/api/quests', activeStoryId],
   });
 
   // Fetch all stories for the bookshelf (not scoped by storyId)
@@ -199,11 +199,11 @@ function GameApp() {
       // Refetch all data after AI response
       console.log('[App] AI response successful, refreshing data');
       analytics.messageSent("chat");
-      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/messages', activeStoryId] });
       queryClient.invalidateQueries({ queryKey: ['/api/character'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/quests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/quests', activeStoryId] });
       queryClient.invalidateQueries({ queryKey: ['/api/items'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/game-state'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/game-state', activeStoryId] });
       queryClient.invalidateQueries({ queryKey: ['/api/enemies'] });
     },
     onError: (error: any) => {
@@ -226,10 +226,11 @@ function GameApp() {
   const enterStory = (storyId: string) => {
     setActiveStory(storyId);
     // Invalidate queries so they refetch with the new storyId header
+    // Query keys include storyId so each story has its own cache
     queryClient.invalidateQueries({ queryKey: ['/api/character'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/game-state'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/quests'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/game-state', storyId] });
+    queryClient.invalidateQueries({ queryKey: ['/api/messages', storyId] });
+    queryClient.invalidateQueries({ queryKey: ['/api/quests', storyId] });
     setCurrentView("game");
   };
 
@@ -298,7 +299,7 @@ function GameApp() {
       />
 
       <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
-        <main className="flex-1 overflow-hidden flex flex-col">
+        <main className="flex-1 min-h-0 flex flex-col">
           {messagesLoading ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-muted-foreground">Loading story...</p>
