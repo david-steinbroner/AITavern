@@ -327,7 +327,7 @@ function GameApp() {
         error={characterError as Error | null}
       />
 
-      <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
+      <div className="h-dvh flex flex-col bg-background text-foreground overflow-hidden">
         <main className="flex-1 min-h-0 flex flex-col">
           {messagesLoading ? (
             <div className="flex items-center justify-center h-full">
