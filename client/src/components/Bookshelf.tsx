@@ -448,7 +448,7 @@ export default function Bookshelf({
       )}
 
       {/* Start a new story — shown when all stories are finished (no active shelf to hold the + button) */}
-      {activeStories.length === 0 && completedStories.length > 0 && (
+      {activeStories.length === 0 && stories.length > 0 && (
         <div className="mb-2">
           <div className="relative">
             <div className="flex gap-4 px-3 pb-3 pt-1">
