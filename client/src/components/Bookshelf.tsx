@@ -77,8 +77,8 @@ const GENRE_LABELS: Record<string, string> = {
 };
 
 function getStoryTitle(story: GameState): string {
-  const genreLabel = GENRE_LABELS[story.genre || ""] || "Story";
-  return `${genreLabel} Story`;
+  if (story.storyTitle) return story.storyTitle;
+  return "Untitled Story";
 }
 
 function BookSpine({
@@ -447,15 +447,18 @@ export default function Bookshelf({
         </div>
       )}
 
-      {/* Start a new story — shown when all stories are finished (no active shelf to hold the + button) */}
-      {activeStories.length === 0 && stories.length > 0 && (
+      {/* Start a new story — always visible when stories exist */}
+      {stories.length > 0 && (
         <div className="mb-2">
-          <div className="relative">
-            <div className="flex gap-4 px-3 pb-3 pt-1">
-              <BookSpine isNew onClick={onNewStory} />
+          {/* Show standalone shelf with + spine only when no active stories (active shelf already has one) */}
+          {activeStories.length === 0 && (
+            <div className="relative">
+              <div className="flex gap-4 px-3 pb-3 pt-1">
+                <BookSpine isNew onClick={onNewStory} />
+              </div>
+              <WoodenShelf />
             </div>
-            <WoodenShelf />
-          </div>
+          )}
           <button
             onClick={onNewStory}
             className="w-full mt-4 bg-primary text-primary-foreground rounded-lg p-4 font-semibold text-base flex items-center justify-center hover:opacity-90 transition-opacity active:scale-[0.98]"
@@ -585,7 +588,7 @@ export default function Bookshelf({
       </div>
 
       {/* Version */}
-      <p className="text-center text-[10px] text-muted-foreground/40 mt-6 pb-2">v0.6.1</p>
+      <p className="text-center text-[10px] text-muted-foreground/40 mt-6 pb-2">v0.6.2</p>
     </div>
   );
 }

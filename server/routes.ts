@@ -510,7 +510,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 Your job: Create the opening page. Establish the world, introduce the reader's character within it, and end with the first set of choices. This is page 1 of ${totalPages} — focus on setup and atmosphere. Make the reader want to turn the page.
 
-Do NOT re-state the character description back to the reader. Instead, SHOW who they are through the opening scene.`;
+Do NOT re-state the character description back to the reader. Instead, SHOW who they are through the opening scene.
+
+IMPORTANT: Include a "storyTitle" field in your JSON response — a short, evocative title for this story (2-5 words). Make it atmospheric and unique, not generic.`;
 
       let aiResponse = await aiService.generateResponse(sessionId, firstPagePrompt, storyId);
 
@@ -530,6 +532,11 @@ Do NOT re-state the character description back to the reader. Instead, SHOW who 
 
       // Save the AI's first page and apply any actions (quests, items, etc.)
       const firstMessage = await applyAIResponse(sessionId, `[New story: ${genreLabel}, ${storyLength}] ${characterDescription}`, aiResponse, storyId);
+
+      // Save AI-generated story title if provided
+      if (aiResponse.storyTitle) {
+        await storage.updateGameState(sessionId, { storyTitle: aiResponse.storyTitle }, storyId);
+      }
 
       res.json({
         success: true,

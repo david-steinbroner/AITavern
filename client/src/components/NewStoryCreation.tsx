@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,17 +35,23 @@ export default function NewStoryCreation({
   const [characterDescription, setCharacterDescription] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
   const [isSurprising, setIsSurprising] = useState(false);
+  const isSubmitting = useRef(false);
 
   const isValid =
     storyLength && characterDescription.trim().length >= 5;
 
   const handleSubmit = () => {
-    if (isValid) {
+    if (!isValid || isSubmitting.current) return;
+    isSubmitting.current = true;
+    try {
       onStartStory({
         genre: "auto",
         storyLength,
         characterDescription: characterDescription.trim(),
       });
+    } finally {
+      // Reset after a delay to allow for navigation — if the user comes back, they can submit again
+      setTimeout(() => { isSubmitting.current = false; }, 5000);
     }
   };
 

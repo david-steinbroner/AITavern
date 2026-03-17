@@ -203,6 +203,7 @@ export class MemStorage implements IStorage {
         storyLength: null,
         genre: null,
         characterDescription: null,
+        storyTitle: null,
         storyComplete: false,
       };
     }
@@ -596,6 +597,7 @@ You've traveled far to reach this place, drawn by rumors that have spread throug
       storyLength: state.storyLength ?? null,
       genre: state.genre ?? null,
       characterDescription: state.characterDescription ?? null,
+      storyTitle: state.storyTitle ?? null,
       storyComplete: state.storyComplete ?? false,
     };
     this.gameState = newGameState;

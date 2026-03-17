@@ -27,6 +27,7 @@ export interface AIResponse {
   content: string;
   sender: 'dm' | 'npc';
   senderName: string | null;
+  storyTitle?: string; // AI-generated title for new stories (2-5 words)
   error?: 'parse_failure' | 'api_error' | 'network_error'; // Error flag for tracking
   tokenUsage?: TokenUsage;
   actions?: {
@@ -683,6 +684,7 @@ Example Quest Actions:
         content: aiResponse.content || "The Guide pauses, considering your words...",
         sender: aiResponse.sender === 'npc' ? 'npc' as const : 'dm' as const,
         senderName: aiResponse.sender === 'npc' ? aiResponse.senderName : null,
+        storyTitle: aiResponse.storyTitle || undefined,
         tokenUsage,
         actions: aiResponse.actions || undefined
       };
