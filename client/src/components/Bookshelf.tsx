@@ -463,7 +463,7 @@ export default function Bookshelf({
             </h2>
           </div>
           <div className="relative">
-            <div className="flex gap-4 px-3 pb-3 pt-1 overflow-x-auto">
+            <div className="flex items-start gap-4 px-3 pb-3 pt-1 overflow-x-auto">
               {activeStories.map(story => (
                 <BookSpine
                   key={story.storyId}
@@ -519,7 +519,7 @@ export default function Bookshelf({
           {/* Show standalone shelf with + spine only when no active stories (active shelf already has one) */}
           {activeStories.length === 0 && (
             <div className="relative">
-              <div className="flex gap-4 px-3 pb-3 pt-1">
+              <div className="flex items-start gap-4 px-3 pb-3 pt-1">
                 <BookSpine isNew onClick={onNewStory} />
               </div>
               <WoodenShelf />
@@ -553,7 +553,7 @@ export default function Bookshelf({
             )}
           </div>
           <div className="relative">
-            <div className="flex gap-4 px-3 pb-3 pt-1 overflow-x-auto">
+            <div className="flex items-start gap-4 px-3 pb-3 pt-1 overflow-x-auto">
               {completedStories.map(story => (
                 <BookSpine
                   key={story.storyId}
@@ -592,7 +592,7 @@ export default function Bookshelf({
             </button>
           </div>
           <div className="relative">
-            <div className="flex gap-4 px-3 pb-3 pt-1 overflow-x-auto">
+            <div className="flex items-start gap-4 px-3 pb-3 pt-1 overflow-x-auto">
               {archivedStories.map(story => (
                 <BookSpine
                   key={story.storyId}
@@ -619,7 +619,7 @@ export default function Bookshelf({
       {stories.length === 0 && (
         <div className="mt-4">
           <div className="relative mb-6">
-            <div className="flex gap-4 px-3 pb-3 pt-1 justify-center">
+            <div className="flex items-start gap-4 px-3 pb-3 pt-1 justify-center">
               <BookSpine isNew onClick={onNewStory} />
             </div>
             <WoodenShelf />
@@ -654,7 +654,7 @@ export default function Bookshelf({
       </div>
 
       {/* Version */}
-      <p className="text-center text-[10px] text-muted-foreground/40 mt-6 pb-2">v0.7.6</p>
+      <p className="text-center text-[10px] text-muted-foreground/40 mt-6 pb-2">v0.7.7</p>
     </div>
   );
 }
