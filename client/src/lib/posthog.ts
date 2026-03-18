@@ -11,8 +11,8 @@ export function initPostHog() {
     posthog.init(import.meta.env.VITE_POSTHOG_KEY, {
       api_host: import.meta.env.VITE_POSTHOG_HOST || 'https://app.posthog.com',
 
-      // Disable in development
-      disabled: import.meta.env.MODE === 'development',
+      // Disable capturing in development
+      opt_out_capturing_by_default: import.meta.env.MODE === 'development',
 
       // Capture pageviews automatically
       capture_pageview: true,
@@ -123,10 +123,6 @@ export const analytics = {
   // Interaction events
   messageSent: (messageType: 'chat' | 'action' | 'combat') => {
     trackEvent('message_sent', { type: messageType });
-  },
-  
-  aiResponseReceived: (responseTime: number) => {
-    trackEvent('ai_response_received', { response_time_ms: responseTime });
   },
   
   // Item events
