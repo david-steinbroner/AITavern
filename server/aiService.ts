@@ -542,7 +542,7 @@ Example Quest Actions:
       const response = await openai.chat.completions.create({
         model: "deepseek/deepseek-chat",
         messages,
-        response_format: { type: "json_object" },
+        // response_format removed — relying on prompt-level JSON instructions for model compatibility
       });
 
       const apiDuration = Date.now() - startTime;
@@ -867,7 +867,7 @@ Example Quest Actions:
             }`
           }
         ],
-        response_format: { type: "json_object" }
+        // response_format removed — relying on prompt-level JSON instructions for model compatibility
       });
 
       const result = JSON.parse(response.choices[0].message.content || '{}');
@@ -988,7 +988,7 @@ Format as JSON:
 }`
           }
         ],
-        response_format: { type: "json_object" }
+        // response_format removed — relying on prompt-level JSON instructions for model compatibility
       });
 
       const result = JSON.parse(response.choices[0].message.content || '{}');
@@ -1055,7 +1055,7 @@ Format as JSON array:
 Make quests appropriate for the character level and current location.`
           }
         ],
-        response_format: { type: "json_object" }
+        // response_format removed — relying on prompt-level JSON instructions for model compatibility
       });
 
       const result = JSON.parse(response.choices[0].message.content || '[]');
