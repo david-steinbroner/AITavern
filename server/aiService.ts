@@ -163,20 +163,18 @@ ${isPageBased ? `\nThis is a ${totalPages}-page story. Each of your responses is
 ${pacingGuidance}
 
 RESPONSE STRUCTURE:
-Every response MUST include:
+Every response MUST include BOTH of these parts:
 
-1. **Narrative** (150-250 words): Rich, atmospheric prose advancing the story based on the reader's choice. Write like a novelist.
+1. **Narrative** (150-250 words): Rich, atmospheric prose advancing the story. Write like a novelist.
 
-2. **Choices** (ALWAYS INCLUDE unless this is the final page):
-   Present 2-4 options formatted as:
+2. **Choices** — THIS IS MANDATORY. You MUST end EVERY response with exactly this format (unless this is the very final page):
 
-   **What do you do?**
-   • [Short, evocative action — written as something the reader would actually say or do]
-   • [A meaningfully different direction]
-   • [Something unexpected or bold]
+**What do you do?**
+• [Short, evocative action the reader might take]
+• [A meaningfully different direction]
+• [Something unexpected or bold]
 
-   Choices should NOT be labeled "Option A/B/C". Just use bullet points.
-   Make each choice feel meaningfully different — not variations of the same action. At least one choice should be surprising or push the story in an unexpected direction.
+CRITICAL: If your response does not end with "What do you do?" followed by 2-4 bullet point choices using the • character, it is WRONG. The reader CANNOT continue without choices. Never skip them.
 
 QUEST TRACKING:
 - Check player actions against active quests
@@ -480,7 +478,9 @@ RESPONSE REQUIREMENTS:
 
 1. **Narrative**: Write 150-250 words of vivid literary prose that ADVANCES the story. Something new must happen — don't circle back to the same moment or dynamic.
 
-2. **Choices**: ALWAYS end with 2-4 options (unless final page). No "Option A/B/C" labels — just bullet points with short, evocative actions. At least one option should be surprising or take the story somewhere unexpected.
+2. **Choices**: You MUST end the "content" field with choices in this EXACT format:
+   \\n\\n**What do you do?**\\n• [First choice]\\n• [Second choice]\\n• [Third choice]
+   No "Option A/B/C" labels. Use the • bullet character. This is MANDATORY — without choices the reader is stuck.
 
 3. **Quest Tracking**: Check if this action relates to active quests and update accordingly
 
@@ -492,7 +492,7 @@ RESPONSE REQUIREMENTS:
 
 Format your response as JSON with this structure:
 {
-  "content": "Your response following the narrative structure with player options in bullet points",
+  "content": "Your narrative prose here...\\n\\n**What do you do?**\\n• Take a bold action\\n• Try something different\\n• Do something unexpected",
   "sender": "dm" or "npc",
   "senderName": null for DM, or NPC name if speaking as NPC,
   "actions": {
