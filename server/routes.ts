@@ -24,6 +24,9 @@ import { spendTracker } from "./spendTracker";
 import { aiService, type AIResponse } from "./aiService";
 import OpenAI from "openai";
 
+// Server-side deduplication lock for story creation (prevents multiple stories from rapid taps)
+const storyCreationLocks = new Map<string, number>();
+
 // Validation schemas for updates
 const updateCharacterSchema = insertCharacterSchema.partial().refine(
   (data) => {
@@ -452,8 +455,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/story/new", aiLimiter, async (req, res) => {
+    const sessionId = getSessionId(req);
+    console.log(`[Story New] REQUEST RECEIVED session=${sessionId} timestamp=${Date.now()}`);
+
+    // Server-side deduplication: block concurrent story creation for the same session
+    const lastCreation = storyCreationLocks.get(sessionId);
+    if (lastCreation && Date.now() - lastCreation < 30000) {
+      console.log(`[Story New] BLOCKED — creation already in progress for session=${sessionId} (locked ${Date.now() - lastCreation}ms ago)`);
+      return res.status(429).json({ success: false, error: "Story creation already in progress" });
+    }
+    storyCreationLocks.set(sessionId, Date.now());
+
     try {
-      const sessionId = getSessionId(req);
       const result = newStorySchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: "Invalid story data", details: result.error.errors });
@@ -567,6 +580,8 @@ IMPORTANT: Include a "storyTitle" field in your JSON response — a short, evoca
     } catch (error) {
       console.error('Error creating new story:', error);
       res.status(500).json({ error: 'Failed to create story' });
+    } finally {
+      storyCreationLocks.delete(sessionId);
     }
   });
 

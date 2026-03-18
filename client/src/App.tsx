@@ -294,10 +294,11 @@ function GameApp() {
       <NewStoryCreation
         isLoading={isCreatingStory}
         onStartStory={async (storyData) => {
+          console.log('[App] onStartStory ENTRY', { isCreatingStory, timestamp: Date.now() });
           if (isCreatingStory) return;
-          console.log('[App] New story requested:', storyData);
           setIsCreatingStory(true);
           try {
+            console.log('[App] onStartStory CALLING API', { timestamp: Date.now() });
             const response = await apiRequest('POST', '/api/story/new', storyData);
             const data = await response.json();
             console.log('[App] New story created:', data);
@@ -305,13 +306,14 @@ function GameApp() {
             // Enter the newly created story
             enterStory(data.storyId);
           } catch (error) {
-            console.error('[App] Error creating story:', error);
+            console.log('[App] onStartStory ERROR', error);
             toast({
               title: "Error Creating Story",
               description: "Something went wrong. Please try again.",
               variant: "destructive",
             });
           } finally {
+            console.log('[App] onStartStory COMPLETE', { timestamp: Date.now() });
             setIsCreatingStory(false);
           }
         }}
