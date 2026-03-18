@@ -294,7 +294,8 @@ function GameApp() {
       <NewStoryCreation
         isLoading={isCreatingStory}
         onStartStory={async (storyData) => {
-          console.log('[App] onStartStory called', { isCreatingStory, storyData });
+          if (isCreatingStory) return;
+          console.log('[App] New story requested:', storyData);
           setIsCreatingStory(true);
           try {
             const response = await apiRequest('POST', '/api/story/new', storyData);

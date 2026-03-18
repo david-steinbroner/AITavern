@@ -43,16 +43,11 @@ export default function NewStoryCreation({
   const handleSubmit = () => {
     if (!isValid || isSubmitting.current) return;
     isSubmitting.current = true;
-    try {
-      onStartStory({
-        genre: "auto",
-        storyLength,
-        characterDescription: characterDescription.trim(),
-      });
-    } finally {
-      // Reset after a delay to allow for navigation — if the user comes back, they can submit again
-      setTimeout(() => { isSubmitting.current = false; }, 5000);
-    }
+    onStartStory({
+      genre: "auto",
+      storyLength,
+      characterDescription: characterDescription.trim(),
+    });
   };
 
   const selectedLength = STORY_LENGTHS.find((l) => l.id === storyLength);
