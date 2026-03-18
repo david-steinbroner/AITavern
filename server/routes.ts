@@ -452,6 +452,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/story/new", aiLimiter, async (req, res) => {
+    const requestId = Math.random().toString(36).substring(7);
+    console.log(`[Story New] REQUEST RECEIVED requestId=${requestId} sessionId=${getSessionId(req)}`);
     try {
       const sessionId = getSessionId(req);
       const result = newStorySchema.safeParse(req.body);
@@ -550,6 +552,7 @@ IMPORTANT: Include a "storyTitle" field in your JSON response — a short, evoca
         await storage.updateGameState(sessionId, { storyTitle: aiResponse.storyTitle }, storyId);
       }
 
+      console.log(`[Story New] REQUEST COMPLETE requestId=${requestId} storyId=${storyId}`);
       res.json({
         success: true,
         storyId,
