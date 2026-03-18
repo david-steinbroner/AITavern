@@ -19,7 +19,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import EmptyState from "./EmptyState";
-import { MessageSquare, Loader2, RefreshCw, Send, Minus, Plus, MoreVertical, BookOpen, XCircle, ChevronUp, ChevronDown } from "lucide-react";
+import { MessageSquare, Loader2, RefreshCw, Send, Minus, Plus, BookOpen, XCircle, ChevronUp, ChevronDown } from "lucide-react";
+import GuideAvatar from "./GuideAvatar";
 import type { Message, Character, Quest, Item, GameState } from "@shared/schema";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { analytics } from "@/lib/posthog";
@@ -401,9 +402,9 @@ ${JSON.stringify(debugInfo, null, 2)}
           </span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreVertical className="w-4 h-4 text-muted-foreground" />
-              </Button>
+              <button className="focus:outline-none flex items-center justify-center" style={{ minHeight: 44, minWidth: 44 }}>
+                <GuideAvatar size={28} animate={false} />
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem

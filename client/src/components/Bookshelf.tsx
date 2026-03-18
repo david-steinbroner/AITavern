@@ -1,8 +1,18 @@
 import { useState, useRef, useCallback } from "react";
-import { Plus, Check, CheckCircle, Archive, ArchiveRestore, ChevronRight } from "lucide-react";
+import { Plus, Check, CheckCircle, Archive, ArchiveRestore, ChevronRight, Minus, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { queryClient } from "@/lib/queryClient";
+import GuideAvatar from "./GuideAvatar";
 import type { GameState } from "@shared/schema";
 
 // --- Archive localStorage helpers ---
@@ -301,41 +311,25 @@ function WoodenShelf() {
   );
 }
 
-// Guide avatar
-function GuideAvatar({ size = 44 }: { size?: number }) {
-  return (
-    <div className="animate-bounce-slow" style={{ width: size, height: size }}>
-      <svg viewBox="0 0 100 100" width={size} height={size}>
-        <defs>
-          <radialGradient id="guideGlow" cx="50%" cy="40%" r="50%">
-            <stop offset="0%" stopColor="#FFD6A5" />
-            <stop offset="60%" stopColor="#FFB6B9" />
-            <stop offset="100%" stopColor="#C9B6E4" />
-          </radialGradient>
-          <radialGradient id="innerGlow" cx="50%" cy="35%" r="40%">
-            <stop offset="0%" stopColor="rgba(255,255,255,0.8)" />
-            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-          </radialGradient>
-        </defs>
-        <circle cx="50" cy="48" r="38" fill="url(#guideGlow)" opacity="0.3" />
-        <ellipse cx="50" cy="50" rx="28" ry="30" fill="url(#guideGlow)" />
-        <ellipse cx="50" cy="44" rx="20" ry="18" fill="url(#innerGlow)" />
-        <ellipse cx="40" cy="46" rx="4" ry="4.5" fill="#5a4a3a" />
-        <ellipse cx="60" cy="46" rx="4" ry="4.5" fill="#5a4a3a" />
-        <circle cx="41.5" cy="44.5" r="1.5" fill="white" />
-        <circle cx="61.5" cy="44.5" r="1.5" fill="white" />
-        <path
-          d="M 40 56 Q 50 63 60 56"
-          fill="none"
-          stroke="#5a4a3a"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        />
-        <circle cx="72" cy="30" r="2" fill="#FFD6A5" opacity="0.8" />
-        <circle cx="28" cy="35" r="1.5" fill="#C9B6E4" opacity="0.6" />
-      </svg>
-    </div>
-  );
+// Font size constants — shared with ChatInterface via same localStorage key
+const FONT_SIZES = [
+  { label: "Small", px: 14 },
+  { label: "Medium", px: 16 },
+  { label: "Large", px: 18 },
+  { label: "X-Large", px: 20 },
+] as const;
+
+const FONT_SIZE_STORAGE_KEY = "storymode-font-size";
+
+function getInitialFontSizeIndex(): number {
+  try {
+    const stored = localStorage.getItem(FONT_SIZE_STORAGE_KEY);
+    if (stored !== null) {
+      const idx = parseInt(stored, 10);
+      if (idx >= 0 && idx < FONT_SIZES.length) return idx;
+    }
+  } catch {}
+  return 1; // Default to Medium
 }
 
 export default function Bookshelf({
@@ -346,6 +340,17 @@ export default function Bookshelf({
 }: BookshelfProps) {
   const [archivedIds, setArchivedIdsState] = useState<Set<string>>(getArchivedIds);
   const [showArchive, setShowArchive] = useState(false);
+  const [fontSizeIndex, setFontSizeIndex] = useState(getInitialFontSizeIndex);
+
+  const currentFontSize = FONT_SIZES[fontSizeIndex];
+
+  const changeFontSize = (delta: number) => {
+    setFontSizeIndex((prev) => {
+      const next = Math.max(0, Math.min(FONT_SIZES.length - 1, prev + delta));
+      try { localStorage.setItem(FONT_SIZE_STORAGE_KEY, String(next)); } catch {}
+      return next;
+    });
+  };
 
   const archiveStory = useCallback((storyId: string) => {
     setArchivedIdsState(prev => {
@@ -408,14 +413,60 @@ export default function Bookshelf({
   };
 
   return (
-    <div className={`min-h-screen bg-background px-4 pb-8 ${className}`}>
+    <div className={`min-h-screen bg-background px-4 pb-8 ${className}`} style={{ fontSize: `${currentFontSize.px}px` }}>
       {/* Header */}
       <div className="pt-6 pb-4 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-foreground">Story Mode</h1>
           <p className="text-xs text-muted-foreground mt-0.5">Your Library</p>
         </div>
-        <GuideAvatar size={44} />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="focus:outline-none" style={{ minHeight: 44, minWidth: 44 }}>
+              <GuideAvatar size={36} animate={false} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56" style={{ backgroundColor: '#FFF9F0' }}>
+            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+              Text Size
+            </DropdownMenuLabel>
+            <div className="flex items-center justify-between px-2 py-1.5">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => changeFontSize(-1)}
+                disabled={fontSizeIndex === 0}
+              >
+                <Minus className="w-3 h-3" />
+              </Button>
+              <span className="text-sm text-foreground">{currentFontSize.label}</span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => changeFontSize(1)}
+                disabled={fontSizeIndex === FONT_SIZES.length - 1}
+              >
+                <Plus className="w-3 h-3" />
+              </Button>
+            </div>
+            {archivedStories.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setShowArchive(!showArchive)}>
+                  <Archive className="w-4 h-4 mr-2" />
+                  {showArchive ? "Hide Archive" : "Show Archive"}
+                </DropdownMenuItem>
+              </>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => { window.location.pathname = "/admin"; }}>
+              <Settings className="w-4 h-4 mr-2" />
+              Admin
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Guide greeting */}
@@ -631,7 +682,7 @@ export default function Bookshelf({
       </div>
 
       {/* Version */}
-      <p className="text-center text-[10px] text-muted-foreground/40 mt-6 pb-2">v0.6.4</p>
+      <p className="text-center text-[10px] text-muted-foreground/40 mt-6 pb-2">v0.6.5</p>
     </div>
   );
 }
