@@ -354,13 +354,17 @@ The core product pivot is complete — Story Mode is now a page-based interactiv
 - **Loading button copy** ✅ — Changed from "The Guide is writing..." to "Starting your story..."
 - **Archive moved to database** ✅ — `storyArchived` boolean column on `gameState`, `PATCH /api/stories/:storyId/archive` endpoint. Replaces localStorage.
 - **Guide avatar as universal menu icon** ✅ — Extracted `GuideAvatar.tsx` as shared component. Replaces three-dot icon on story screen. Bookshelf avatar is now a DropdownMenu trigger with font size, archive toggle, and admin link.
-- **Version number on bookshelf** ✅ — Small text at bottom of library page, bumped with each deploy. Currently v0.7.0.
+- **Version number on bookshelf** ✅ — Small text at bottom of library page, bumped with each deploy. Currently v0.7.2.
 
 **Code cleanup shipped:**
 - Deleted: `CharacterQuestionnaire.tsx`, `AbilityScoreRoller.tsx`, `CampaignManager.tsx`
 - Deleted: `MemStorage` class (~665 lines)
 - Deleted: Enemy routes, combat routes, campaign routes (~350 lines)
 - Net: **-1,362 lines** removed
+- Fixed duplicate `aiResponseReceived` key in `posthog.ts` (kept enhanced version)
+- Fixed PostHog `disabled` → `opt_out_capturing_by_default` (eliminated TS error)
+- Updated caniuse-lite browserslist database
+- `npm audit fix`: 24 → 6 vulnerabilities (remaining 6 require Vite 8.0 breaking change)
 
 ---
 
@@ -464,7 +468,8 @@ Added act-based pacing guidance so the AI shapes the narrative arc across the fu
 | `client/src/App.tsx` | 3-view routing (bookshelf → newStory → game) and top-level state. `enterStory()` and `navigateToBookshelf()` set `_activeStoryId` synchronously before invalidating queries. Complex — be careful here. |
 | `client/src/components/Bookshelf.tsx` | Main landing screen. Virtual bookshelf with book spines, quick-continue card. Guide avatar is a DropdownMenu trigger (font size, archive toggle, admin). Archive is server-side (`storyArchived` column). Long-press any book spine for actions (end story, archive, unarchive). |
 | `client/src/components/NewStoryCreation.tsx` | 2-step story creation wizard: page count → character description. Includes "Surprise me" AI character generator (max_tokens: 90, 1-2 sentences). |
-| `client/src/components/ChatInterface.tsx` | Story reading screen. Fixed nav bar (non-sticky, flex layout keeps it pinned), message display, collapsible bottom drawer for choices (defaults collapsed), font size controls, End Story confirmation. |
+| `client/src/components/ChatInterface.tsx` | Story reading screen. Fixed nav bar with Guide avatar menu trigger (replaces three-dot icon), message display, collapsible bottom drawer for choices (defaults collapsed), font size controls, End Story confirmation, scroll-to-bottom button. |
+| `client/src/components/GuideAvatar.tsx` | Shared Guide mascot component (glowing orb SVG). Props: `size`, `animate` (disables bounce when used as menu trigger). Used in both Bookshelf and ChatInterface. |
 | `client/src/components/GuideConfirmDialog.tsx` | Reusable confirmation modal for Guide chatbot actions. Built on shadcn AlertDialog with brand palette. Props: title, description, children slot, confirm/cancel labels. |
 | `client/src/components/GuideStoryCard.tsx` | Presentational story info card (genre badge, page progress, character description). Slots into GuideConfirmDialog. Genre colors match bookshelf spines. |
 | `client/src/components/StoryProgress.tsx` | Page progress bar with pacing phase labels. Not currently rendered (removed from game view) but kept for future repurposing. |
