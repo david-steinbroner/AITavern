@@ -148,6 +148,7 @@ export const gameState = pgTable("game_state", {
   genre: text("genre"), // 'fantasy', 'mystery', 'scifi', 'romance', 'horror'
   characterDescription: text("character_description"), // Plain-text character description (V2 style)
   storyTitle: text("story_title"), // AI-generated story title (2-5 words)
+  storyArchived: boolean("story_archived").default(false).notNull(),
   storyComplete: boolean("story_complete").default(false).notNull(),
 });
 

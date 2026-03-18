@@ -11,26 +11,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import GuideAvatar from "./GuideAvatar";
 import type { GameState } from "@shared/schema";
-
-// --- Archive localStorage helpers ---
-const ARCHIVE_KEY = "story-mode-archived-ids";
-
-function getArchivedIds(): Set<string> {
-  try {
-    const raw = localStorage.getItem(ARCHIVE_KEY);
-    if (!raw) return new Set();
-    return new Set(JSON.parse(raw) as string[]);
-  } catch {
-    return new Set();
-  }
-}
-
-function setArchivedIds(ids: Set<string>) {
-  localStorage.setItem(ARCHIVE_KEY, JSON.stringify(Array.from(ids)));
-}
 
 // --- Long-press hook ---
 function useLongPress(onLongPress: () => void, delay = 500) {
@@ -338,7 +321,6 @@ export default function Bookshelf({
   onNewStory,
   className = "",
 }: BookshelfProps) {
-  const [archivedIds, setArchivedIdsState] = useState<Set<string>>(getArchivedIds);
   const [showArchive, setShowArchive] = useState(false);
   const [fontSizeIndex, setFontSizeIndex] = useState(getInitialFontSizeIndex);
 
@@ -352,22 +334,22 @@ export default function Bookshelf({
     });
   };
 
-  const archiveStory = useCallback((storyId: string) => {
-    setArchivedIdsState(prev => {
-      const next = new Set(prev);
-      next.add(storyId);
-      setArchivedIds(next);
-      return next;
-    });
+  const archiveStory = useCallback(async (storyId: string) => {
+    try {
+      await apiRequest('PATCH', `/api/stories/${storyId}/archive`, { archived: true });
+      queryClient.invalidateQueries({ queryKey: ['/api/stories'] });
+    } catch (error) {
+      console.error('Failed to archive story:', error);
+    }
   }, []);
 
-  const unarchiveStory = useCallback((storyId: string) => {
-    setArchivedIdsState(prev => {
-      const next = new Set(prev);
-      next.delete(storyId);
-      setArchivedIds(next);
-      return next;
-    });
+  const unarchiveStory = useCallback(async (storyId: string) => {
+    try {
+      await apiRequest('PATCH', `/api/stories/${storyId}/archive`, { archived: false });
+      queryClient.invalidateQueries({ queryKey: ['/api/stories'] });
+    } catch (error) {
+      console.error('Failed to unarchive story:', error);
+    }
   }, []);
 
   const endStory = useCallback(async (storyId: string) => {
@@ -390,9 +372,9 @@ export default function Bookshelf({
     }
   }, []);
 
-  const activeStories = stories.filter(s => !s.storyComplete && s.totalPages && s.totalPages > 0);
-  const completedStories = stories.filter(s => s.storyComplete && !archivedIds.has(s.storyId!));
-  const archivedStories = stories.filter(s => s.storyComplete && archivedIds.has(s.storyId!));
+  const activeStories = stories.filter(s => !s.storyComplete && !s.storyArchived && s.totalPages && s.totalPages > 0);
+  const completedStories = stories.filter(s => s.storyComplete && !s.storyArchived);
+  const archivedStories = stories.filter(s => s.storyArchived);
 
   // Guide greeting based on library state
   const getGreeting = () => {
@@ -682,7 +664,7 @@ export default function Bookshelf({
       </div>
 
       {/* Version */}
-      <p className="text-center text-[10px] text-muted-foreground/40 mt-6 pb-2">v0.6.9</p>
+      <p className="text-center text-[10px] text-muted-foreground/40 mt-6 pb-2">v0.7.0</p>
     </div>
   );
 }

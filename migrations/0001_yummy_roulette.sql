@@ -1,0 +1,1 @@
+ALTER TABLE "game_state" ADD COLUMN "story_archived" boolean DEFAULT false NOT NULL;

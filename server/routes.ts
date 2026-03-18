@@ -7,15 +7,10 @@ import {
   insertQuestSchema,
   insertItemSchema,
   insertMessageSchema,
-  insertEnemySchema,
   insertGameStateSchema,
-  insertCampaignSchema,
-  updateEnemySchema,
   type Character,
   type Quest,
   type Item,
-  type Enemy,
-  type Campaign,
   type Message
 } from "@shared/schema";
 import { z } from "zod";
@@ -766,269 +761,6 @@ IMPORTANT: Include a "storyTitle" field in your JSON response — a short, evoca
     }
   });
 
-  // Enemy routes
-  app.get("/api/enemies", async (req, res) => {
-    try {
-      const combatId = req.query.combatId as string | undefined;
-      const enemies = await storage.getEnemies(combatId);
-      res.json(enemies);
-    } catch (error) {
-      console.error('Error fetching enemies:', error);
-      res.status(500).json({ error: "Failed to fetch enemies" });
-    }
-  });
-
-  app.post("/api/enemies", async (req, res) => {
-    try {
-      const result = insertEnemySchema.safeParse(req.body);
-      if (!result.success) {
-        return res.status(400).json({ error: "Invalid enemy data", details: result.error.errors });
-      }
-      
-      const enemy = await storage.createEnemy(result.data);
-      res.json(enemy);
-    } catch (error) {
-      console.error('Error creating enemy:', error);
-      res.status(500).json({ error: "Failed to create enemy" });
-    }
-  });
-
-  app.patch("/api/enemies/:id", async (req, res) => {
-    try {
-      const result = updateEnemySchema.safeParse(req.body);
-      if (!result.success) {
-        return res.status(400).json({ error: "Invalid enemy data", details: result.error.errors });
-      }
-      
-      const enemy = await storage.updateEnemy(req.params.id, result.data);
-      if (!enemy) {
-        return res.status(404).json({ error: "Enemy not found" });
-      }
-      res.json(enemy);
-    } catch (error) {
-      console.error('Error updating enemy:', error);
-      res.status(500).json({ error: "Failed to update enemy" });
-    }
-  });
-
-  // Combat action endpoint (scheduled for deletion)
-  app.post("/api/combat/action", aiLimiter, async (req, res) => {
-    try {
-      const sessionId = getSessionId(req);
-      const { action, targetId, spellId, itemId } = req.body;
-
-      if (!action || typeof action !== 'string') {
-        return res.status(400).json({ error: "Action is required" });
-      }
-
-      // Process combat action through AI
-      let actionMessage = '';
-      switch (action) {
-        case 'attack':
-          actionMessage = targetId ? `I attack the enemy with ID ${targetId}!` : 'I launch an attack!';
-          break;
-        case 'defend':
-          actionMessage = 'I take a defensive stance, ready to block incoming attacks.';
-          break;
-        case 'cast':
-          actionMessage = spellId ? `I cast spell ${spellId}!` : 'I prepare to cast a spell.';
-          break;
-        case 'use-item':
-          actionMessage = itemId ? `I use item ${itemId}!` : 'I use an item from my inventory.';
-          break;
-        case 'flee':
-          actionMessage = 'I attempt to flee from combat!';
-          break;
-        case 'enemy-turn':
-          // Handle enemy turn automatically without AI (faster, more reliable)
-          const currentGameState = await storage.getGameState(sessionId);
-          if (currentGameState?.inCombat && currentGameState.combatId) {
-            // Just advance the turn back to player
-            await storage.updateGameState(sessionId, {
-              currentTurn: 'player',
-              turnCount: (currentGameState.turnCount ?? 0) + 1
-            });
-
-            // Store the enemy turn message for consistency
-            const message = await storage.createMessage({
-              sessionId,
-              content: "Enemy completes their turn. It's your turn now!",
-              sender: 'dm',
-              senderName: null,
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            });
-
-            return res.json({ message });
-          }
-          return res.status(400).json({ error: "Not in combat" });
-        default:
-          actionMessage = `I perform the ${action} action.`;
-      }
-
-      // Generate AI response for combat action
-
-      // Check daily spend limit
-      const spendCheck = spendTracker.canMakeRequest();
-      if (!spendCheck.allowed) {
-        return res.status(429).json({ error: spendCheck.reason });
-      }
-
-      // Generate AI response
-      const storyId = getStoryId(req);
-      const aiResponse = await aiService.generateResponse(sessionId, actionMessage, storyId);
-
-      // Track request with actual token usage
-      spendTracker.trackRequest(sessionId, aiResponse.tokenUsage);
-
-      // Store messages
-      await storage.createMessage({
-        sessionId,
-        storyId: storyId ?? null,
-        content: actionMessage,
-        sender: 'player',
-        senderName: null,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      });
-
-      const aiMessage = await storage.createMessage({
-        sessionId,
-        content: aiResponse.content,
-        sender: aiResponse.sender,
-        senderName: aiResponse.senderName,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      });
-
-      // Apply AI actions (enemy updates, character changes, etc.)
-      if (aiResponse.actions) {
-        const actions = aiResponse.actions;
-        
-        // Start combat if specified
-        if ((actions as any).startCombat) {
-          const combatData = (actions as any).startCombat;
-          const combatId = randomUUID();
-          
-          // Create enemies for this combat encounter
-          if (combatData.enemies && Array.isArray(combatData.enemies)) {
-            for (const enemyData of combatData.enemies) {
-              const enemyValidation = insertEnemySchema.safeParse({ ...enemyData, combatId });
-              if (enemyValidation.success) {
-                await storage.createEnemy(enemyValidation.data);
-              }
-            }
-          }
-          
-          // Update game state to start combat
-          await storage.updateGameState(sessionId, {
-            inCombat: true,
-            combatId,
-            currentTurn: 'player',
-            turnCount: 1
-          });
-        }
-
-        // Update enemy if specified
-        if ((actions as any).updateEnemy) {
-          const enemyUpdate = (actions as any).updateEnemy;
-          const enemyValidation = updateEnemySchema.safeParse(enemyUpdate.updates);
-          if (enemyValidation.success) {
-            await storage.updateEnemy(enemyUpdate.id, enemyValidation.data);
-          }
-        }
-        
-        // End combat if specified
-        if ((actions as any).endCombat) {
-          const endCombatData = (actions as any).endCombat;
-
-          // Award victory rewards before ending combat
-          if (endCombatData.victory) {
-            const character = await storage.getCharacter(sessionId);
-            if (character) {
-              let expGain = 75; // Default experience
-
-              // Check if rewards is an object with experience property
-              if (endCombatData.rewards && typeof endCombatData.rewards === 'object' && endCombatData.rewards.experience) {
-                expGain = endCombatData.rewards.experience;
-              }
-
-              const rewardValidation = updateCharacterSchema.safeParse({ experience: character.experience + expGain });
-              if (rewardValidation.success) {
-                await storage.updateCharacter(character.id, sessionId, rewardValidation.data);
-              }
-            }
-          }
-
-          await storage.updateGameState(sessionId, {
-            inCombat: false,
-            combatId: null,
-            currentTurn: null,
-            turnCount: 0
-          });
-        }
-        
-        if (actions.updateCharacter) {
-          const character = await storage.getCharacter(sessionId);
-          if (character) {
-            const charValidation = updateCharacterSchema.safeParse(actions.updateCharacter.updates);
-            if (charValidation.success) {
-              await storage.updateCharacter(character.id, sessionId, charValidation.data);
-            }
-          }
-        }
-
-        if (actions.updateGameState) {
-          const gameStateValidation = insertGameStateSchema.partial().safeParse(actions.updateGameState);
-          if (gameStateValidation.success) {
-            await storage.updateGameState(sessionId, gameStateValidation.data);
-          }
-        }
-      }
-
-      // Check for combat end conditions and turn management
-      const combatGameState = await storage.getGameState(sessionId);
-      if (combatGameState?.inCombat && combatGameState.combatId) {
-        const combatEnemies = await storage.getEnemies(combatGameState.combatId);
-        const aliveEnemies = combatEnemies.filter(e => e.isActive && e.currentHealth > 0);
-
-        // End combat if no enemies left alive
-        if (aliveEnemies.length === 0) {
-          // Award victory rewards - base 50 exp + 10 per enemy defeated
-          const character = await storage.getCharacter(sessionId);
-          if (character) {
-            const baseExp = 50;
-            const enemyExp = combatEnemies.length * 10;
-            const totalExp = baseExp + enemyExp;
-            await storage.updateCharacter(character.id, sessionId, { experience: character.experience + totalExp });
-          }
-
-          await storage.updateGameState(sessionId, {
-            inCombat: false,
-            combatId: null,
-            currentTurn: null,
-            turnCount: 0
-          });
-        } else {
-          // Toggle turn after player action
-          const newTurn = combatGameState.currentTurn === 'player' ? 'enemy' : 'player';
-          const newTurnCount = newTurn === 'player' ? combatGameState.turnCount + 1 : combatGameState.turnCount;
-
-          await storage.updateGameState(sessionId, {
-            currentTurn: newTurn,
-            turnCount: newTurnCount
-          });
-        }
-      }
-
-      res.json({
-        message: aiMessage,
-        actions: aiResponse.actions
-      });
-
-    } catch (error) {
-      console.error('Error processing combat action:', error);
-      res.status(500).json({ error: "Failed to process combat action" });
-    }
-  });
-
   // Quest routes
   app.get("/api/quests", async (req, res) => {
     try {
@@ -1280,6 +1012,23 @@ IMPORTANT: Include a "storyTitle" field in your JSON response — a short, evoca
     }
   });
 
+  // Archive/unarchive a story
+  app.patch("/api/stories/:storyId/archive", async (req, res) => {
+    try {
+      const sessionId = getSessionId(req);
+      const { storyId } = req.params;
+      const { archived } = req.body;
+      if (typeof archived !== 'boolean') {
+        return res.status(400).json({ error: "archived must be a boolean" });
+      }
+      await storage.updateGameState(sessionId, { storyArchived: archived }, storyId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error archiving story:', error);
+      res.status(500).json({ error: "Failed to archive story" });
+    }
+  });
+
   // AI Conversation endpoints
   app.post("/api/ai/chat", aiLimiter, async (req, res) => {
     try {
@@ -1373,97 +1122,6 @@ IMPORTANT: Include a "storyTitle" field in your JSON response — a short, evoca
     } catch (error) {
       console.error('Error in quick action:', error);
       res.status(500).json({ error: "Failed to process quick action" });
-    }
-  });
-
-  // Campaign routes
-  app.get("/api/campaigns", async (_req, res) => {
-    try {
-      const campaigns = await storage.getCampaigns();
-      res.json(campaigns);
-    } catch (error) {
-      console.error('Error fetching campaigns:', error);
-      res.status(500).json({ error: "Failed to fetch campaigns" });
-    }
-  });
-
-  app.get("/api/campaigns/active", async (_req, res) => {
-    try {
-      const campaign = await storage.getActiveCampaign();
-      if (!campaign) {
-        return res.status(404).json({ error: "No active campaign" });
-      }
-      res.json(campaign);
-    } catch (error) {
-      console.error('Error fetching active campaign:', error);
-      res.status(500).json({ error: "Failed to fetch active campaign" });
-    }
-  });
-
-  app.post("/api/campaigns", async (req, res) => {
-    try {
-      const result = insertCampaignSchema.omit({ id: true, createdAt: true, lastPlayed: true, isActive: true }).safeParse(req.body);
-      if (!result.success) {
-        return res.status(400).json({ error: "Invalid campaign data", details: result.error.errors });
-      }
-      
-      const campaign = await storage.createCampaign(result.data);
-      res.json(campaign);
-    } catch (error) {
-      console.error('Error creating campaign:', error);
-      res.status(500).json({ error: "Failed to create campaign" });
-    }
-  });
-
-  app.patch("/api/campaigns/:id/activate", async (req, res) => {
-    try {
-      const campaign = await storage.setActiveCampaign(req.params.id);
-      if (!campaign) {
-        return res.status(404).json({ error: "Campaign not found" });
-      }
-      res.json(campaign);
-    } catch (error) {
-      console.error('Error activating campaign:', error);
-      res.status(500).json({ error: "Failed to activate campaign" });
-    }
-  });
-
-  app.delete("/api/campaigns/:id", async (req, res) => {
-    try {
-      const deleted = await storage.deleteCampaign(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ error: "Campaign not found" });
-      }
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Error deleting campaign:', error);
-      res.status(500).json({ error: "Failed to delete campaign" });
-    }
-  });
-
-  // Campaign reset rounds (scheduled for deletion)
-  app.post("/api/campaigns/:id/reset-rounds", async (req, res) => {
-    try {
-      const sessionId = getSessionId(req);
-      const campaign = await storage.getCampaign(req.params.id);
-      if (!campaign) {
-        return res.status(404).json({ error: "Campaign not found" });
-      }
-
-      const gameState = await storage.getGameState(sessionId);
-      if (gameState) {
-        await storage.updateGameState(sessionId, {
-          turnCount: 0,
-          currentTurn: null,
-          combatId: null,
-          inCombat: false
-        });
-      }
-
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Error resetting rounds:', error);
-      res.status(500).json({ error: "Failed to reset rounds" });
     }
   });
 
