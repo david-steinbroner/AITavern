@@ -1,5 +1,7 @@
 # CLAUDE.md — Story Mode Engineering Operating Manual
 
+Standards: inherits ../engineering-standards.md. Overrides & project-specifics below.
+
 > Read this at the start of every session.
 > Single source of truth for **how we work** — rules, current state, and pointers to the docs that hold the rest.
 > The umbrella `/Users/davidsteinbroner/Projects/CLAUDE.md` also applies; this file extends it.
@@ -85,40 +87,25 @@ Render auto-deploys from `main`. Commit-mode per the umbrella convention — com
 
 ## 5. Code style
 
+Baseline code style is inherited from `../engineering-standards.md` (TS strict / no `any`, descriptive names, one-thing functions, no magic numbers; functional components / one-per-file / props-interface-above / ~200-line ceiling + grandfathering; thin routes → service layer, Zod at the boundary, never expose internal errors; DB through the storage layer + migrations; system prompts in dedicated files, AI try/catch + fallback; strip debug `console.log` / gate on `NODE_ENV`). Project-specific deltas below.
+
 ### General
-- TypeScript strict mode. No `any` without a comment.
 - No implicit returns where a return value is expected.
-- Descriptive names (`generateStoryResponse`, not `genResp`).
-- Functions do one thing. New functions over ~40 lines → split.
-- No magic numbers/strings; use named constants.
+- New functions over ~40 lines → split (project line-count signal; "one responsibility" is still the real rule).
 
 ### React components
-- Functional only.
-- Props interface above the component: `interface StoryCardProps { ... }`.
-- One component per file, filename matches export.
-- New components under ~200 lines (existing larger files are grandfathered; split when you touch them).
-- No inline styles — Tailwind tokens only. Hardcoded hex is being phased out (see `docs/ROADMAP.md`).
+- Hardcoded hex is being phased out — Tailwind tokens only going forward (see `docs/ROADMAP.md`).
 
 ### Server / API
-- Route handlers are thin: validate input + call a service function. Business logic in service files.
 - API responses use the shape in `docs/api-and-cost.md`.
-- All routes validate input with Zod before touching DB or AI.
-- Never expose internal error messages to the client.
 
 ### Database
-- All DB queries go through the storage layer (`server/dbStorage.ts` or service files). Never query directly from a route handler.
-- Schema changes require a migration. Never hand-edit the database.
 - Postgres: `snake_case`. TypeScript: `camelCase`. Drizzle handles the mapping.
 
 ### AI integration
-Voice/prompt rules are in `docs/ai-voice.md`. Code rules:
-- System prompts in dedicated files or labeled constants — never inline in routes.
-- All AI calls wrapped in try/catch with a meaningful fallback.
-- Log token usage on every AI call (`spendTracker.trackRequest`).
+Voice/prompt rules are in `docs/ai-voice.md`. Project-specific code rules (baseline AI rules inherited):
+- Log token usage on every AI call via `spendTracker.trackRequest`.
 - Never send raw user input to the AI without `<reader_input>...</reader_input>` delimiters.
-
-### Logging
-Operational server logs (init signals, cost tracking, request gates) are fine. `console.log('here')` debugging is not — strip before commit, or gate on `NODE_ENV !== 'production'`.
 
 ---
 
